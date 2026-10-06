@@ -1,0 +1,18 @@
+{
+  "_comment": "Selectores de Instagram verificados EN VIVO el 2026-10-05/06 por Unbound para esta misma campana, antes de que existiera este repo standalone. Se copian aqui porque son hechos sobre el DOM de Instagram, no datos de ninguna cuenta ni cliente: no dependen de quien esta logueado.",
+  "grabado_at": "2026-10-05",
+  "urls": {
+    "compositor_nuevo": "https://www.instagram.com/direct/new/",
+    "_compositor_nuevo": "Navega DIRECTO al compositor con el buscador de destinatario ya enfocado."
+  },
+  "selectores": {
+    "buscador_destinatario": "input[name=\"searchInput\"]",
+    "fila_sugerencia": "div[role=\"button\"]",
+    "_fila_sugerencia": "div[role=\"button\"] matchea TODO lo clickeable de la pagina, no solo las filas de sugerencia. El driver filtra por CONTENIDO (el handle exacto como linea completa del texto de la fila), nunca por posicion ni por substring: la busqueda tambien devuelve handles parecidos (variantes con numeros o palabras pegadas) que un match flojo agarraria por error.",
+    "compositor": "div[contenteditable=\"true\"][role=\"textbox\"]",
+    "_compositor": "Es un DIV contenteditable, no un <textarea>: la lectura de vuelta usa innerText, nunca value."
+  },
+  "_bug_markdown": "Instagram interpreta guion_bajo como delimitador de italica al teclear y SE COME el caracter en algunos casos (verificado en vivo). El driver compara el texto EN LA CAJA contra el texto que se iba a mandar ANTES de dar Enter, y no manda si no coinciden.",
+  "_edit_profile_es_link": "'Edit profile' en el perfil propio es un <a href=\"/accounts/edit/\">, no un <button>. La verificacion de sesion busca en a, button y div[role=button] por eso.",
+  "_sin_url_de_hilo_derivable": "A diferencia de X, Instagram no tiene un id de conversacion que se pueda armar a mano: cada destinatario nuevo exige pasar por la busqueda del compositor, aunque ya le hayas escrito antes."
+}

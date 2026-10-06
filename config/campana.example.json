@@ -1,0 +1,84 @@
+{
+  "_comment": "Config de la campana de embajadores Mexico, Alice (DeAgent.AI). Copia este archivo a campana.json (sin '.example') y edita TODO lo que dice EDITAR. campana.json nunca se sube a ningun lado: esta en .gitignore a proposito.",
+  "_que_es_esto": "Alice es el producto de DeAgent.AI, una plataforma de predicciones y apuestas deportivas que esta entrando a Mexico. El trabajo es reclutar embajadores (tipsters, creadores de contenido deportivo) que promuevan Alice a su comunidad, con un modelo hibrido de flat fee mas comision recurrente por volumen. No es venta de un producto a un consumidor: es reclutamiento de socios de referido.",
+
+  "identidad": {
+    "_EDITAR": "Tu nombre y como te presentas. Esto NO es Unbound, Sophia ni Juanes: es tu propia gestion con tus propias cuentas. Las plantillas de mensaje de abajo usan [TU_NOMBRE] como marcador: reemplazalo por como te presentas de verdad antes de mandar nada.",
+    "nombre": "EDITAR: tu nombre",
+    "como_te_presentas": "EDITAR: ej. 'trabajo con el equipo de Alice en su entrada a Mexico' o lo que hayan acordado contigo y Juanes/Alice"
+  },
+
+  "cuentas": {
+    "_comment": "Los handles de TUS propias cuentas, las que vas a operar. Ninguna credencial va aqui: las credenciales viven en la sesion de tu propio navegador o tu propio cliente de Telegram/correo, nunca en un archivo de este repo.",
+    "x": "EDITAR: @tu_handle_de_x (o null si no operas X)",
+    "instagram": "EDITAR: tu_handle_de_instagram (o null)",
+    "telegram": "EDITAR: @tu_handle_de_telegram (o null)",
+    "email": "EDITAR: tu correo de outreach (o null)"
+  },
+
+  "instagram_cdp_port": 9333,
+  "_instagram_cdp_port": "El puerto de remote debugging del Chrome que vas a dejar abierto para que tools/ig-dm.js se conecte. 9333 es el default: cambialo solo si ese puerto ya lo usa otra cosa en tu maquina. Ver README seccion 'Instagram' para como arrancar Chrome con este flag.",
+
+  "contacto": {
+    "preferencia": ["telegram", "instagram", "x", "email"],
+    "_preferencia": "Orden en que se prueba el canal de un candidato cuando tiene mas de uno disponible. Mismo orden que recomienda el plan de campana: Telegram primero, despues Instagram, despues X, correo al final.",
+    "seguimiento": {
+      "toques_max": 4,
+      "_toques_max": "Primer contacto mas 3 seguimientos. Un contacto que responde sale de la cadencia automatica (marcalo con 'descartar' o 'tarifa' segun en que termine).",
+      "espera_dias_desde_ultimo_toque": [5, 5, 8],
+      "_espera": "Toque 1 -> esperar 5 dias -> toque 2 (dia ~5) -> esperar 5 dias mas -> toque 3 (dia ~10) -> esperar 8 dias mas -> toque 4, cierre suave (dia ~18). Tomado del plan de campana, seccion 2.5.",
+      "cierre_forzado_dias": 25,
+      "_cierre_forzado": "Si pasan mas de 25 dias desde el PRIMER toque sin respuesta, se cierra 'sin_respuesta' aunque no se hayan agotado los 4 toques. Plan de campana, seccion 2.5: 'Mas de 25: no se escribe mas'."
+    }
+  },
+
+  "canales": {
+    "_comment": "Topes diarios y gate de CADA canal que vos operas. Estos numeros NO son los que usa Sophia/Unbound (esos corren sobre cuentas con anos de antiguedad): si tus cuentas son nuevas, EMPIEZA MAS BAJO Y SUBE DESPACIO. La investigacion que cito el plan de campana (Metricool, practicas anti-deteccion de Meta 2026) dice lo mismo para los tres canales: lo que castiga no es el volumen, es el RITMO (todo de golpe) y el texto IDENTICO repetido. Espaciar y variar importa mas que el numero.",
+    "x": {
+      "activo": "EDITAR: true o false",
+      "tope_dia": 15,
+      "_tope_dia": "Referencia: Unbound corre su X (cuenta de 10 anos) a 30/dia para esta campana. Con una cuenta nueva o poco usada, arrancar mas bajo (10-15) y subir solo si no hay senales de bloqueo."
+    },
+    "telegram": {
+      "activo": "EDITAR: true o false",
+      "tope_dia": 20,
+      "_tope_dia": "Referencia: el pozo compartido de Unbound para Telegram es 30/dia. Mismo criterio: cuenta nueva, empezar mas bajo."
+    },
+    "instagram": {
+      "activo": "EDITAR: true o false",
+      "tope_dia": 15,
+      "_tope_dia": "Referencia: Unbound corre Instagram a 20/dia para esta campana (identidades.json, confirmado 2026-10-05 tras investigar practicas anti-deteccion de Meta). Instagram es el canal donde el RITMO importa mas: espaciar los envios (minutos, no segundos) y nunca mandar el mismo texto dos veces en la misma tanda."
+    },
+    "email": {
+      "activo": "EDITAR: true o false",
+      "tope_dia": 20
+    }
+  },
+
+  "guion": {
+    "_comment": "Lo que NO se puede decir, mecanico. Esto NO reemplaza tu criterio ni el de tu propio Claude Code revisando el mensaje antes de mandarlo: 'revisar' es el ultimo chequeo automatico, no el unico. Las reglas completas (con el porque de cada una) estan en el README, seccion 'Reglas duras'.",
+    "nunca_decir": [
+      "crypto",
+      "cripto",
+      "web3"
+    ],
+    "_nunca_decir": "Orden de Juanes, plan de campana seccion 2.4: 'Nunca decir crypto ni Web3 en el mensaje al creador'. Alice es predicciones y apuestas deportivas: para el embajador y su audiencia, no se presenta como un producto cripto aunque por debajo use esa tecnologia.",
+    "aperturas_prohibidas": [
+      "\\bno se si\\b.{0,40}\\bpero\\b",
+      "\\bno quiero (molestar|robarte|quitarte)",
+      "\\b(disculpa|perdon) (que|si|por)",
+      "\\bapologies (for|if)",
+      "\\bthis may (not )?be relevant",
+      "\\bperhaps\\b",
+      "\\bquizas\\b"
+    ],
+    "_aperturas_prohibidas": "Regex sobre la PRIMERA frase del mensaje (hasta el primer punto, admiracion o pregunta). Un mensaje que abre pidiendo disculpas o dudando ya perdio: si el embajador vale la pena escribirle, se dice derecho.",
+    "max_chars": {
+      "x": 600,
+      "instagram": 600,
+      "telegram": 600,
+      "email": 900
+    },
+    "_max_chars": "Un DM que hay que desplazar no se lee. El correo tolera un poco mas porque tiene asunto y cuerpo separados."
+  }
+}
