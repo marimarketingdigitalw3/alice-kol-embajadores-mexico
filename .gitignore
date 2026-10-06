@@ -1,0 +1,8 @@
+# Lo propio de esta instalacion. Nada de esto se sube.
+node_modules/
+config/campana.json
+state/*.json
+state/*.jsonl
+!state/.gitkeep
+*.session
+.env

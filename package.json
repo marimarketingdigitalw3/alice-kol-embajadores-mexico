@@ -1,0 +1,17 @@
+{
+  "name": "alice-embajadores-mexico",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Herramientas standalone para la campana de embajadores Mexico de Alice (DeAgent.AI). Repo propio, sin dependencias de ningun otro sistema.",
+  "main": "tools/alice.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "estado": "node tools/alice.js estado",
+    "cola": "node tools/alice.js cola"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.5.0"
+  }
+}
