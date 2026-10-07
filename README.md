@@ -162,14 +162,14 @@ directorio (lo mismo que correr `alice.js marcar` a mano despues).
 Esto es el punto de partida, no una plantilla fija: la variacion real entre
 mensajes (no repetir la misma frase palabra por palabra el mismo dia) es
 parte de por que esto funciona, segun las practicas de 2026 contra deteccion
-de outreach automatizado en cada plataforma. **Reemplaza `[TU_NOMBRE]` por
+de outreach automatizado en cada plataforma. **Reemplaza `Maria` por
 como te presentas de verdad** (`config/campana.json identidad`).
 
 ### X e Instagram (primera persona)
 
 Apertura (variar segun el perfil):
-- "[Nombre], soy [TU_NOMBRE]. Trabajo con el equipo que esta llevando a Alice a Mexico."
-- "Hola [Nombre], [TU_NOMBRE] por aqui."
+- "[Nombre], soy Maria. Trabajo con el equipo que esta llevando a Alice a Mexico."
+- "Hola [Nombre], Maria por aqui."
 - "[Nombre], te escribo sobre algo que puede interesarte."
 
 Cuerpo:
@@ -186,7 +186,7 @@ acordado con vos):
 Nunca en un solo bloque: 2 o 3 mensajes cortos seguidos, con una pausa de
 segundos entre cada uno (no minutos), como alguien escribiendo.
 
-1. "Hola [Nombre], soy [TU_NOMBRE]"
+1. "Hola [Nombre], soy Maria"
 2. "estamos ayudando a Alice (plataforma de predicciones y apuestas deportivas) a entrar a Mexico"
 3. "vi tu canal y creo que tu comunidad conectaria bien. Buscamos embajadores con un modelo de flat fee mas comision. Te interesa que te cuente mas?"
 
