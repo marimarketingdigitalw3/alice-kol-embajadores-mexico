@@ -57,7 +57,9 @@ function clave(canal, handle) {
 function destinoUsable(canal, valor) {
   const v = String(valor || '').trim();
   if (!v) return false;
-  if (canal === 'email') return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  // Sin '/' ni ':' antes de la @: un link de TikTok o YouTube con @handle
+  // (https://www.tiktok.com/@alguien.mx) no es un correo aunque tenga @ y punto.
+  if (canal === 'email') return /^[^\s@\/:]+@[^\s@\/]+\.[A-Za-z]{2,}$/.test(v);
   if (canal === 'x') {
     const h = v.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//i, '').replace(/^@/, '').split(/[/?#]/)[0];
     return /^[A-Za-z0-9_]{1,15}$/.test(h) && !['i', 'home', 'search', 'explore'].includes(h.toLowerCase());
