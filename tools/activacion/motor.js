@@ -160,7 +160,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       const hechos = a.checks[p.id] || [];
       lineas.push('', `Checklist (${hechos.length}/${p.checklist.length}). Marca cada uno antes de subir la prueba.`);
     }
-    lineas.push('', `🔐 Para avanzar: ${p.prueba.pide}`);
+    lineas.push('', `🔐 Para avanzar: ${p.prueba.pide}${p.prueba.tipo === 'formulario' ? ' Toca "Responder las preguntas" y te las hago una por una.' : ''}`);
     if (a.bloqueo) lineas.push('', `🚧 Bloqueo actual: ${a.bloqueo}`);
 
     const botones = [];
@@ -168,8 +168,15 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       const hechos = a.checks[p.id] || [];
       p.checklist.forEach((item, i) => botones.push([{ t: `${hechos.includes(i) ? '☑' : '☐'} ${item}`, d: `k:${i}` }]));
     }
-    botones.push([{ t: '✅ Marcar hecho (subir prueba)', d: 'h' }]);
-    botones.push([{ t: '📤 Guiones', d: 'g' }, { t: '🚧 Bloqueos', d: 'b' }, { t: '❓ FAQ', d: 'f' }]);
+    const ETIQUETA_HECHO = {
+      formulario: '📝 Responder las preguntas',
+      captura: '📸 Marcar hecho (subir captura)',
+      captura_o_texto: '📸 Marcar hecho (captura o texto)',
+      hash: '🔗 Marcar hecho (pegar hash)',
+      link_referido: '🔗 Marcar hecho (pegar link)',
+    };
+    botones.push([{ t: ETIQUETA_HECHO[p.prueba.tipo] || '✅ Marcar hecho', d: 'h' }]);
+    botones.push([...(p.guiones ? [{ t: '📤 Guiones', d: 'g' }] : []), { t: '🚧 Bloqueos', d: 'b' }, { t: '❓ FAQ', d: 'f' }]);
 
     const out = [msg(lineas.join('\n'), { titulo: `${a.nombre} · ${p.titulo}`, botones })];
     if (conGuiones) out.push(...guionesSalida(a, p));
