@@ -29,9 +29,9 @@ const ESCRITORIOS = {
 const POR_ID = Object.fromEntries(Object.entries(ESCRITORIOS).map(([k, v]) => [v.id, k]));
 
 const TAREAS = [
-  ['ALICE AI - Outreach diario KOLs Mexico', 'lunes a viernes, 8:30 a. m. (Colombia)', 'Respuestas, follow-ups, primeros contactos (max 50), prompts para Claude Chrome, actualizacion del sheet y reporte. Si alguien confirma llamada, el reporte trae el comando /llamada listo.'],
-  ['ALICE AI - Calificacion de KOLs (Telegram)', 'lunes a viernes, 7:42 p. m. (Colombia)', 'Detecta primeras llamadas confirmadas, prepara la observacion nocturna de cada grupo para Claude Chrome, la guia de la llamada y el borrador del due diligence form.'],
-  ['ALICE AI - Activacion de canales M1-M4', 'lunes a viernes, 12:23 p. m. (Colombia)', 'Segundas llamadas por agendar, contratos pendientes, plazos M1 a M3 vencidos y los guiones del dia por agente.'],
+  ['ALICE AI - Outreach diario KOLs Mexico', 'lunes a viernes, 8:00 a. m. (Colombia)', 'Respuestas, follow-ups, primeros contactos (max 50), prompts para Claude Chrome, actualizacion del sheet y reporte. Si alguien confirma llamada, el reporte trae el comando /llamada listo.'],
+  ['ALICE AI - Calificacion de KOLs (Telegram)', 'lunes a viernes, 8:00 a. m. (Colombia)', 'Detecta primeras llamadas confirmadas, prepara la observacion de cada grupo para esa noche para Claude Chrome, la guia de la llamada y el borrador del due diligence form.'],
+  ['ALICE AI - Activacion de canales M1-M4', 'lunes a viernes, 8:00 a. m. (Colombia)', 'Segundas llamadas por agendar, contratos pendientes, plazos M1 a M3 vencidos y los guiones del dia por agente.'],
 ];
 
 function crearOficina({ dir = STATE_DIR, permitidos = [], ahora = () => new Date(), stores = {} } = {}) {

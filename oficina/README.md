@@ -11,9 +11,9 @@ primer pago. Cada uno trabaja de dos formas:
 
 | # | Agente | Tarea programada | Horario (Colombia) | Escritorio en el bot |
 |---|---|---|---|---|
-| 1 | Outreach | ALICE AI - Outreach diario KOLs Mexico (ya existia) | L a V, 8:30 a. m. | 📣 /outreach |
-| 2 | Calificacion (Telegram qualification) | ALICE AI - Calificacion de KOLs (Telegram) | L a V, 7:42 p. m. | 🔎 /calificacion |
-| 3 | Activacion de canales | ALICE AI - Activacion de canales M1-M4 | L a V, 12:23 p. m. | 🚀 /activacion |
+| 1 | Outreach | ALICE AI - Outreach diario KOLs Mexico (ya existia) | L a V, 8:00 a. m. | 📣 /outreach |
+| 2 | Calificacion (Telegram qualification) | ALICE AI - Calificacion de KOLs (Telegram) | L a V, 8:00 a. m. | 🔎 /calificacion |
+| 3 | Activacion de canales | ALICE AI - Activacion de canales M1-M4 | L a V, 8:00 a. m. | 🚀 /activacion |
 
 Las instrucciones de los agentes 2 y 3 estan en `tareas/`. Las del agente 1 viven en su tarea programada.
 Base de datos comun: [sheet de outreach](https://docs.google.com/spreadsheets/d/1YbjjvoEaaJ9PuHn5s1JVEdKJzoPpvgJzUAJhatxeMvo/edit?gid=1619343648).
