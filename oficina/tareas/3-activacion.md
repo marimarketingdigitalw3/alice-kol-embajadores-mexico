@@ -8,10 +8,14 @@ La regla detras de todo: un agente solo esta activado cuando tuvo en sus manos d
 
 Fuentes del proceso en Notion: "LATAM - BD guide (EN)" (https://app.notion.com/p/3f9eaf522171816cbbd5dd6995b27c25), etapas 3 y 4, y la pagina Channel Activation Training si el conector tiene acceso. Leelas al empezar.
 
+## CUENTA DE TRABAJO (OBLIGATORIO)
+Esta tarea trabaja SOLO con la cuenta de Google mborrero@unboundoperators.com: Gmail, Google Calendar (calendarId = mborrero@unboundoperators.com) y Google Drive.
+Antes de empezar, comprueba con Gmail (busqueda in:sent) que el remitente sea mborrero@unboundoperators.com. Si el conector devuelve otra cuenta (por ejemplo una @gmail.com personal), no sigas: no uses datos de esa cuenta, no entregues archivo y envia solo una notificacion corta diciendo que el conector esta en la cuenta equivocada.
+
 ## 1. DE DONDE SALEN LOS KOLs DE HOY
 1. Sheet de outreach: https://docs.google.com/spreadsheets/d/1YbjjvoEaaJ9PuHn5s1JVEdKJzoPpvgJzUAJhatxeMvo/edit?gid=1619343648 (Google Drive, exportar a xlsx y procesar con python y openpyxl). Leads con Status In conversation o Active, y Team Notes o Next step que mencionen DD aprobado, segunda llamada, contrato o firma.
 2. Tracker de activacion en Notion: busca "AliceAI(Kixly.co)-Channel Activation Tracker" (columnas Channel, Region, Channel Type, Model, Signed On, Stage, M1 Done a M4 Done, Blocker, Next Action, Starting Rate, Upline). Si no tienes acceso, dilo en Alertas y sigue con el sheet.
-3. Google Calendar: segundas llamadas agendadas o hechas. Si el calendario no es el de trabajo, revisa las invitaciones en Gmail de mborrero@unboundoperators.com.
+3. Google Calendar de mborrero@unboundoperators.com: segundas llamadas agendadas o hechas. Las invitaciones en su Gmail sirven de respaldo.
 
 ## 2. QUE PREPARAS SEGUN LA ETAPA
 
