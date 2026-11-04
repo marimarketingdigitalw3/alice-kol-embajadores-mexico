@@ -20,6 +20,9 @@ const { FLUJO_CALIFICACION } = require('./calificacion');
 const { storeArchivo } = require('./store');
 
 const STATE_DIR = path.join(__dirname, '..', '..', 'state');
+const SHEET_LEADS = 'https://docs.google.com/spreadsheets/d/1YbjjvoEaaJ9PuHn5s1JVEdKJzoPpvgJzUAJhatxeMvo/edit?gid=1619343648';
+// Quien puede ver el enlace del sheet (esta abierto a cualquiera con el enlace).
+const ADMINS = (process.env.OFICINA_ADMINS || '5175211842').split(',').map((x) => x.trim()).filter(Boolean);
 
 const ESCRITORIOS = {
   o: { id: 'outreach', nombre: 'Outreach', icono: '📣' },
@@ -91,7 +94,7 @@ function crearOficina({ dir = STATE_DIR, permitidos = [], ahora = () => new Date
     return salidas.map((s) => {
       const out = { ...s };
       if (s.botones) out.botones = s.botones.map((fila) => fila.map((b) => ({ ...b, d: `${k}|${b.d}` })));
-      if (k !== 'o' && s.titulo && !s.guion) out.titulo = `${e.icono} ${s.titulo}`;
+      if (k !== 'o' && s.titulo && !s.guion && !s.titulo.startsWith(e.icono)) out.titulo = `${e.icono} ${s.titulo}`;
       return out;
     });
   }
@@ -116,12 +119,13 @@ function crearOficina({ dir = STATE_DIR, permitidos = [], ahora = () => new Date
     })];
   }
 
-  function vistaOutreach() {
+  function vistaOutreach(uid) {
+    const esAdmin = ADMINS.includes(String(uid));
     return [
       msg([
         'El outreach corre como tarea programada en Claude (no desde este bot). Lee el sheet de Leads, revisa respuestas, prepara follow-ups y primeros contactos, y deja todo en borrador para Maria.',
         '',
-        'Sheet: https://docs.google.com/spreadsheets/d/1YbjjvoEaaJ9PuHn5s1JVEdKJzoPpvgJzUAJhatxeMvo/edit?gid=1619343648',
+        esAdmin ? `Sheet de Leads: ${SHEET_LEADS}` : 'Sheet de Leads (acceso restringido)',
         '',
         'Traspaso: cuando un KOL confirma la primera llamada, registralo con /llamada. Su expediente se abre en Calificacion y desde ahi nadie lo puede activar sin due diligence aprobado.',
       ].join('\n'), { titulo: '📣 Escritorio de Outreach', botones: [[{ t: '📞 Registrar llamada confirmada', d: 'o|llamada' }], [{ t: '🗓 Tareas programadas', d: 'o|tareas' }]] }),
@@ -149,7 +153,7 @@ function crearOficina({ dir = STATE_DIR, permitidos = [], ahora = () => new Date
   function irA(u, uid, k) {
     u.escritorio = k;
     guardar();
-    if (k === 'o') return vistaOutreach();
+    if (k === 'o') return vistaOutreach(uid);
     const m = MOTORES[k];
     return envolver(k, [msg(`Estas en ${ESCRITORIOS[k].nombre}. /agentes para tus expedientes, /paso para el paso actual, /ayuda para todo.`, { titulo: `${ESCRITORIOS[k].icono} Escritorio de ${ESCRITORIOS[k].nombre}` })])
       .concat(envolver(k, m.recibir({ usuario: { id: uid, nombre: u.nombre }, texto: '/agentes' })));

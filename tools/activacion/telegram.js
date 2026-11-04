@@ -58,7 +58,7 @@ function renderTelegram(s) {
 const COMANDOS = [
   ['oficina', 'Menu de la oficina'], ['llamada', 'Primera llamada confirmada'], ['pipeline', 'Todo el embudo'],
   ['outreach', 'Escritorio de Outreach'], ['calificacion', 'Escritorio de Calificacion'], ['activacion', 'Escritorio de Activacion'],
-  ['paso', 'Paso actual con guiones'], ['agentes', 'Tus expedientes'],
+  ['paso', 'Paso actual con guiones'], ['agentes', 'Tus expedientes'], ['nuevo', 'Registrar agente recien firmado'],
   ['estado', 'Hitos, plazos y blocker'], ['checklist', 'C1 a C8 con pruebas'], ['bloqueo', 'Donde se atoro'],
   ['escalar', 'Armar escalamiento'], ['faq', 'Preguntas del agente'], ['resumen', 'Version para el grupo'],
   ['nodecir', 'Lo que nunca se dice'], ['numeros', 'Cifras clave'], ['tbc', 'Pendientes de confirmar'],

@@ -491,7 +491,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
 
   function vistaAgentes(u) {
     const mios = Object.values(estado.agentes).filter((a) => String(a.bdId) === String(u.id));
-    if (!mios.length) return [msg('No tienes agentes todavia. Usa /nuevo para registrar una firma.')];
+    if (!mios.length) return [msg(F.textoSinExpedientes || 'No tienes agentes todavia. Llegan solos cuando Stella aprueba un due diligence en Calificacion, o usa /nuevo para registrar una firma.')];
     return [msg('Elige el agente con el que vas a trabajar:', {
       titulo: '👥 Tus agentes',
       botones: mios.map((a) => [{ t: `${a.id === u.activo ? '▶ ' : ''}#${a.id} ${a.nombre} · ${etapa(a)}`, d: `a:${a.id}` }]),

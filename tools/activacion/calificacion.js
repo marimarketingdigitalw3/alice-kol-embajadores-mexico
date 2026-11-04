@@ -861,6 +861,7 @@ const FLUJO_CALIFICACION = {
   BLOQUEOS,
   bloqueoDeFase: () => 'Q',
   etiquetaCierre: 'DD aprobado (pasa a Activacion)',
+  textoSinExpedientes: 'Todavia no tienes expedientes en Calificacion. Cuando un KOL confirme la primera llamada, usa /llamada.',
   textoNuevo: 'Abriendo expediente de calificacion. Lo normal es que llegue desde Outreach cuando se confirma la primera llamada.',
   ayuda: AYUDA,
   cierre: (a) => [{ titulo: `✅ ${a.nombre} · DD aprobado`, texto: 'Este expediente ya paso al escritorio de Activacion. Usa /activacion para seguir.' }],
