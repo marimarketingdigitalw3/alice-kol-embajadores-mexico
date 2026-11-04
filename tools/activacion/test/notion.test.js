@@ -76,12 +76,45 @@ test('el bot ofrece el dato de Notion en la pregunta y lo valida igual', async (
   await procesarUpdate(oficina, { callback_query: { id: 'q', from: { id: 1, first_name: 'Maria' }, message: { chat: { id: 9 } }, data: 'c|notion' } }, api, notion);
   assert.match(enviados.map((s) => s.texto).join('\n'), /Traje \d+ datos/);
 
+  // El bot responde solo con el DD y pide confirmar.
   const paso = oficina.recibir({ usuario: u, boton: 'c|h' });
-  const preg = paso.find((s) => /Fuente del lead/.test(s.texto || ''));
+  const resumen = paso.find((s) => /Respuestas desde Notion/.test(s.titulo || ''));
+  assert.ok(resumen, 'muestra el resumen de respuestas del DD');
+  assert.match(resumen.texto, /Juan Esteban Sierra/);
+  // Revisar una por una: la pregunta trae la sugerencia y el boton.
+  const rev = oficina.recibir({ usuario: u, boton: 'c|nrev' });
+  const preg = rev.find((s) => /Fuente del lead/.test(s.texto || ''));
   assert.match(preg.texto, /En Notion: «Juan Esteban Sierra/);
   assert.ok(preg.botones.flat().some((b) => b.d === 'c|nt'));
-  const sig = oficina.recibir({ usuario: u, boton: 'c|nt' });
-  assert.ok(sig.some((s) => /Quien trajo el lead/.test(s.texto || '')));
+  // Confirmar: completa el paso 1 sin escribir nada y pasa al paso 2.
+  const ok = oficina.recibir({ usuario: u, boton: 'c|nok' });
+  const texto = ok.map((s) => `${s.titulo || ''} ${s.texto || ''}`).join('\n');
+  assert.match(texto, /Entrar al grupo/);
+  const exp = Object.values(oficina.motores.c._estado.agentes)[0];
+  assert.strictEqual(exp.proveedor, 'Juanes');
+  assert.ok(exp.pasos.q_fuente);
   const estado = oficina.recibir({ usuario: u, texto: '/estado' });
   assert.ok(!/频道|代理/.test(estado.map((s) => s.texto).join('\n')));
+});
+
+test('saca del texto libre del DD el scorecard, los cinco numeros, vetos y prueba rapida', () => {
+  const c = camposDD([
+    'A · Members talk to each other about bets (15): ✓ 15. Se ven 12 personas hablando de partidos.',
+    'D · Slips and results come back (10): ✗ 0. No vimos boletos.',
+    'E · Owner present and moderates (10): ✓ 10. Responde a diario.',
+    'Bonus (up to 32): +6. VIP group y comunidad propia.',
+    'Five numbers (last 24 h): 64 messages; 11 speakers; 55% top-5 share; 3 slips this week; 2 platform mentions.',
+    'Veto check (all five items): (1) Members in excluded regions: none seen. (2) Signs of minors: no. (3) Scams: no. (4) Only admins or bots post: no. (5) Quit-gambling group: no.',
+    'Group type (Group Chat Portraits, section 2): Tipster channel with its own chat, work with owner.',
+    '1 | TG Bets | https://t.me/tgbets | 12.400 | channel',
+  ]);
+  assert.strictEqual(c.scA, 'si');
+  assert.strictEqual(c.scD, 'no');
+  assert.strictEqual(c.bonus, '6');
+  assert.deepStrictEqual([c.mensajes, c.personas, c.top5, c.boletos, c.menciones], ['64', '11', '55', '3', '2']);
+  assert.deepStrictEqual([c.vetoRegion, c.vetoMenores, c.vetoEstafa, c.vetoSoloAdmins, c.vetoAyuda], ['no', 'no', 'no', 'no', 'no']);
+  assert.strictEqual(c.tipoGrupo, 'tipster');
+  assert.strictEqual(c.t2Partidos, 'si');
+  assert.strictEqual(c.t2Boletos, 'no');
+  assert.match(c.inventario, /TG Bets · https:\/\/t\.me\/tgbets/);
 });

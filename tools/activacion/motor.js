@@ -309,6 +309,64 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     return F.PASOS.find((p) => p.id === e.pasoId).prueba.campos;
   }
 
+  // ------------------------------------------------ respuestas desde Notion
+  const valorNotion = (a, c) => {
+    if (!a.notion || c.tipo === 'foto') return null;
+    const v = a.notion[c.clave];
+    if (v === undefined || v === null || String(v).trim() === '') return null;
+    if (c.opciones && !c.opciones.some(([k]) => k === v)) return null;
+    return String(v);
+  };
+
+  /** Si el DD ya responde preguntas de este paso, las muestra respondidas para confirmar. */
+  function propuestaNotion(a, campos) {
+    if (!a.notion) return null;
+    const ctx = { ...a };
+    const filas = [];
+    let faltan = 0;
+    for (const c of campos) {
+      if (c.aplica && !c.aplica(ctx)) continue;
+      const v = valorNotion(a, c);
+      if (v === null) { faltan += 1; continue; }
+      const etiqueta = c.opciones ? c.opciones.find(([k]) => k === v)[1] : v;
+      filas.push(`• ${c.pregunta.split('\n')[0].replace(/[:?]\s*$/, '')}: ${String(etiqueta).slice(0, 160)}`);
+      ctx[c.clave] = v;
+    }
+    if (!filas.length) return null;
+    return [msg([
+      `Respondi ${filas.length} pregunta${filas.length === 1 ? '' : 's'} con lo que dice el DD en Notion:`,
+      '',
+      ...filas,
+      '',
+      faltan ? `Faltan ${faltan} que el DD no responde: te las pregunto despues de confirmar.` : 'El DD responde todo este paso.',
+      'Cada respuesta pasa por las mismas validaciones. Si alguna no es cierta hoy, toca "Revisar una por una".',
+    ].join('\n'), { titulo: '📥 Respuestas desde Notion', botones: [
+      [{ t: '✅ Confirmar respuestas', d: 'nok' }],
+      [{ t: '✏️ Revisar una por una', d: 'nrev' }],
+      [{ t: '✖ Cancelar', d: 'x' }],
+    ] })];
+  }
+
+  /** Usa las respuestas del DD; se detiene en la primera que falte o no pase la validacion. */
+  function avanzarConNotion(u, a, campos) {
+    const e = u.esperando;
+    for (;;) {
+      while (e.i < campos.length && campos[e.i].aplica && !campos[e.i].aplica({ ...a, ...e.datos })) e.i += 1;
+      if (e.i >= campos.length) { guardar(); return terminarFormulario(u, e); }
+      const c = campos[e.i];
+      const v = valorNotion(a, c);
+      if (v === null) { guardar(); return preguntar(u, a, campos); }
+      const res = c.validar(v, { ...a, ...e.datos }, ahora());
+      if (!res.ok) {
+        guardar();
+        if (res.bloquear) return responderFormulario(u, c.opciones ? { opcion: v } : { texto: v });
+        return [msg(`❌ El dato del DD no alcanza para esta pregunta: ${res.error}`), ...preguntar(u, a, campos)];
+      }
+      e.datos[c.clave] = res.valor;
+      e.i += 1;
+    }
+  }
+
   function responderFormulario(u, entrada) {
     const e = u.esperando;
     const campos = camposDe(e);
@@ -652,6 +710,13 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       if (!u.esperando || u.esperando.tipo !== 'form') return [msg('Ese formulario ya no esta activo.')];
       return responderFormulario(u, { opcion: d.slice(2) });
     }
+    if (d === 'nok' || d === 'nrev') {
+      if (!u.esperando || u.esperando.tipo !== 'form') return [msg('Ese formulario ya no esta activo.')];
+      const a = agenteActivo(u) || {};
+      const campos = camposDe(u.esperando);
+      if (d === 'nrev') return preguntar(u, a, campos);
+      return avanzarConNotion(u, a, campos);
+    }
     if (d === 'nt') {
       if (!u.esperando || u.esperando.tipo !== 'form') return [msg('Ese formulario ya no esta activo.')];
       const a = agenteActivo(u) || {};
@@ -696,6 +761,8 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       if (p.prueba.tipo === 'formulario') {
         u.esperando = { tipo: 'form', origen: 'paso', pasoId: p.id, i: 0, datos: {} };
         guardar();
+        const auto = propuestaNotion(a, p.prueba.campos);
+        if (auto) return auto;
         return [msg(p.prueba.pide, { titulo: `📝 ${p.titulo}` }), ...preguntar(u, a, p.prueba.campos)];
       }
       u.esperando = { tipo: 'prueba', pasoId: p.id };

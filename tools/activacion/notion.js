@@ -165,10 +165,10 @@ const FILAS_3 = [
   [/^subscribers \(as displayed\)/i, 'dcSuscriptores', 'dcSuscriptoresComo'],
   [/^verified subscribers/i, 'dcVerificados', 'dcVerificadosComo'],
   [/^avg\.? views/i, 'dcVistas', 'dcVistasComo'],
-  [/^posting frequency/i, 'dcPosts', 'dcPostsComo'],
+  [/^posting frequency/i, 'dcPostsSemana', 'dcPostsComo'],
   [/^6-month subscriber growth/i, 'dcCrecimiento', null],
   [/^unique speakers/i, 'dcHablantes', 'dcHablantesComo'],
-  [/^avg\.? messages per day/i, 'dcMensajes', 'dcMensajesComo'],
+  [/^avg\.? messages per day/i, 'dcMensajesDia', 'dcMensajesComo'],
 ];
 // Seccion 6: Item | Lo que dice | Lo verificado | Metodo.
 const FILAS_4 = [
@@ -192,11 +192,79 @@ function camposDD(lineas) {
       if (m) poner(/primary/i.test(m[1]) ? 'principales' : /reason/i.test(m[1]) ? 'razonPrincipales' : 'conclusion', m[2]);
     }
   }
+  derivados(lineas, c);
   if (c.tasaAprobada) {
     const n = c.tasaAprobada.match(/(\d+(?:[.,]\d+)?)\s*%/);
     if (n) c.tasa = n[1].replace(',', '.');
   }
   return c;
+}
+
+const SI = /^\s*(?:[✓✔✅☑]|(?:yes|si|sí|true)(?![a-z]))/i;
+const NO = /^\s*(?:[✗✘❌☐]|(?:no|none|ninguno|ninguna|not seen|no se vio|false)(?![a-z]))/i;
+const siNo = (t) => (SI.test(t) ? 'si' : NO.test(t) ? 'no' : null);
+const numero = (t) => { const m = String(t).replace(/,/g, '').match(/\d+(?:\.\d+)?/); return m ? m[0] : null; };
+
+/** Lo que el DD dice en texto libre (scorecard, cinco numeros, vetos, prueba rapida, roles). */
+function derivados(lineas, c) {
+  const poner = (k, v) => { if (k && v !== null && v !== undefined && String(v).trim() !== '' && c[k] === undefined) c[k] = String(v).trim(); };
+  const inventario = [];
+  for (const bruta of lineas) {
+    const l = limpio(bruta);
+    // Scorecard A-F: "A · Members talk ... (15): ✓ 15. evidencia"
+    const sc = l.match(/^[-•]?\s*([A-F])\s*·[^:]*\(\d+\)\s*:\s*(.*)$/);
+    if (sc) { poner(`sc${sc[1]}`, siNo(sc[2])); continue; }
+    const bonus = l.match(/^[-•]?\s*Bonus[^:]*:\s*\+?\s*(\d+)\.?\s*(.*)$/i);
+    if (bonus) { poner('bonus', bonus[1]); poner('bonusMotivo', bonus[2]); continue; }
+    const cinco = l.match(/^Five numbers[^:]*:\s*(.*)$/i);
+    if (cinco) {
+      const partes = cinco[1].split(';').map((x) => x.trim());
+      ['mensajes', 'personas', 'top5', 'boletos', 'menciones'].forEach((k, i) => { if (partes[i]) poner(k, numero(partes[i])); });
+      continue;
+    }
+    const veto = l.match(/^Veto check[^:]*:\s*(.*)$/i);
+    if (veto) {
+      const items = veto[1].split(/\(\d\)/).slice(1);
+      ['vetoRegion', 'vetoMenores', 'vetoEstafa', 'vetoSoloAdmins', 'vetoAyuda'].forEach((k, i) => {
+        if (!items[i]) return;
+        const resp = items[i].split(':').slice(1).join(':');
+        poner(k, siNo(resp));
+      });
+      continue;
+    }
+    const quick = l.match(/^Quick test:\s*(.*)$/i);
+    if (quick) {
+      const items = quick[1].split(/\(\d\)/).slice(1);
+      ['pf1', 'pf2', 'pf3', 'pf4', 'pf5'].forEach((k, i) => {
+        if (!items[i]) return;
+        const resp = items[i].split('?').slice(1).join('?');
+        poner(k, siNo(resp));
+      });
+      continue;
+    }
+    const tipo = l.match(/^Group type[^:]*:\s*(.*)$/i);
+    if (tipo) {
+      const t = tipo[1].toLowerCase();
+      const k = /casino|slot/.test(t) ? 'casino' : /licen|sportsbook chat|casa/.test(t) ? 'casa' : /spam/.test(t) ? 'spam'
+        : /esport/.test(t) ? 'esports' : /tipster/.test(t) ? 'tipster' : /small|chico|owner/.test(t) ? 'chico' : null;
+      poner('tipoGrupo', k);
+      continue;
+    }
+    const roles = l.match(/^Roles:\s*(.*)$/i);
+    if (roles) { poner('personasClave', roles[1]); continue; }
+    const comp = l.match(/^Competitors[^:]*:\s*(.*?)(?:\.\s*Player complaints[^:]*:\s*(.*))?$/i);
+    if (comp) { poner('competidores', comp[1]); poner('quejas', comp[2]); continue; }
+    // Inventario (seccion 4): "# | Nombre | Link | Seguidores | Tipo"
+    const cel = bruta.split(' | ').map(limpio);
+    if (cel.length === 5 && /^\d+$/.test(cel[0]) && cel[1]) inventario.push(`${cel[1]} · ${cel[2]} · ${cel[3]} · ${cel[4]}`);
+    if (cel.length === 2 && /^type$/i.test(cel[0])) poner('dcTipo', /(☑|✅|\[x\])\s*channel/i.test(cel[1]) ? 'canal' : /(☑|✅|\[x\])\s*group/i.test(cel[1]) ? 'grupo' : null);
+    if (cel.length === 2 && /^publicly verifiable/i.test(cel[0])) poner('dcPublico', /(☑|✅|\[x\])\s*public/i.test(cel[1]) ? 'si' : /(☑|✅|\[x\])\s*private/i.test(cel[1]) ? 'no' : null);
+  }
+  if (inventario.length) poner('inventario', inventario.join('\n'));
+  // Prueba de 2 minutos del paso "Entrar al grupo": sale del mismo scorecard.
+  if (c.scA) poner('t2Partidos', c.scA);
+  if (c.scD) poner('t2Boletos', c.scD);
+  if (c.scE) poner('t2Owner', c.scE);
 }
 
 function camposTracker(t) {
