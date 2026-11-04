@@ -1,5 +1,10 @@
 {
-  "buildCommand": "",
+  "buildCommand": "node tools/activacion/registrar-webhook.js",
   "outputDirectory": "public",
-  "crons": [{ "path": "/api/cron", "schedule": "0 13 * * *" }]
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }
