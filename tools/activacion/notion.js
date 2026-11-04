@@ -55,30 +55,47 @@ function crearNotion({ token = process.env.NOTION_TOKEN, fetchImpl = (...a) => f
     return out;
   }
 
-  async function buscar(query, filtro) {
-    const j = await api('POST', '/search', { query, page_size: 20, filter: { property: 'object', value: filtro } });
-    return j.results;
+  async function buscar(query, filtro, max = 100) {
+    const out = [];
+    let cursor;
+    do {
+      const j = await api('POST', '/search', { query, page_size: 100, filter: { property: 'object', value: filtro }, ...(cursor ? { start_cursor: cursor } : {}) });
+      out.push(...j.results);
+      cursor = j.has_more && out.length < max ? j.next_cursor : null;
+    } while (cursor);
+    return out;
+  }
+
+  /** Busca con varias consultas (nombre del KOL, sin tildes, primer nombre) y junta sin repetir. */
+  async function buscarVarias(consultas, filtro) {
+    const vistos = new Map();
+    for (const q of [...new Set(consultas.filter(Boolean))]) {
+      for (const p of await buscar(q, filtro, 100)) vistos.set(p.id, p);
+    }
+    return [...vistos.values()];
   }
 
   /** Pagina del DD de un KOL: el titulo debe decir "Due Diligence" y el nombre del KOL. */
   async function buscarDD(nombre) {
-    const n = normal(nombre);
-    const paginas = await buscar(nombre, 'page');
+    const nucleo = nucleoNombre(nombre);
+    const paginas = await buscarVarias(['Due Diligence Form', nucleo, sinTildes(nucleo)], 'page');
     const dd = paginas
       .map((p) => ({ p, t: tituloPagina(p) }))
-      .filter(({ t }) => /due diligence/i.test(t) && normal(t).includes(n));
+      .filter(({ t }) => /due diligence/i.test(t) && coincide(t, nucleo));
     if (!dd.length) return null;
-    dd.sort((a, b) => new Date(b.p.last_edited_time) - new Date(a.p.last_edited_time));
-    return { id: dd[0].p.id, titulo: dd[0].t, url: dd[0].p.url, lineas: await lineas(dd[0].p.id) };
+    // Si hay copias ("... (1)"), manda la original y, entre iguales, la editada mas reciente.
+    dd.sort((a, b) => (/\(\d+\)\s*$/.test(a.t) - /\(\d+\)\s*$/.test(b.t)) || (new Date(b.p.last_edited_time) - new Date(a.p.last_edited_time)));
+    return { id: dd[0].p.id, titulo: dd[0].t, url: dd[0].p.url, lineas: await lineas(dd[0].p.id), copias: dd.length };
   }
 
-  /** Fila del KOL en el tracker de activacion (base de datos con "Channel Activation Tracker" en el titulo). */
+  /** Fila del KOL en el tracker de activacion (base de datos con columna Channel). */
   async function buscarTracker(nombre) {
-    const n = normal(nombre);
-    const paginas = await buscar(nombre, 'page');
-    const filas = paginas.filter((p) => p.parent && p.parent.type === 'database_id' && p.properties && p.properties.Channel
-      && normal(tituloPagina(p)).includes(n));
+    const nucleo = nucleoNombre(nombre);
+    const paginas = await buscarVarias([nucleo, sinTildes(nucleo), nucleo.split(' ')[0]], 'page');
+    const filas = paginas.filter((p) => p.parent && (p.parent.type === 'database_id' || p.parent.type === 'data_source_id')
+      && p.properties && p.properties.Channel && coincide(tituloPagina(p), nucleo));
     if (!filas.length) return null;
+    filas.sort((a, b) => new Date(b.last_edited_time || 0) - new Date(a.last_edited_time || 0));
     const props = filas[0].properties;
     const val = (k) => {
       const v = props[k];
@@ -99,12 +116,21 @@ function crearNotion({ token = process.env.NOTION_TOKEN, fetchImpl = (...a) => f
   /** Todo lo que Notion sabe del KOL, ya traducido a los campos del bot. */
   async function datosKOL(nombre) {
     const [dd, tr] = await Promise.all([buscarDD(nombre), buscarTracker(nombre)]);
-    return { dd: dd ? { titulo: dd.titulo, url: dd.url } : null, tracker: tr ? { url: tr.url } : null, campos: { ...camposTracker(tr), ...camposDD(dd ? dd.lineas : []) } };
+    return { buscado: nucleoNombre(nombre), dd: dd ? { titulo: dd.titulo, url: dd.url, copias: dd.copias } : null, tracker: tr ? { url: tr.url } : null, campos: { ...camposTracker(tr), ...camposDD(dd ? dd.lineas : []) } };
   }
 
   return { buscarDD, buscarTracker, datosKOL };
 }
 
+const sinTildes = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/** Nombre del KOL sin el canal ni aclaraciones: "Tomas Guiral · TG Bets" -> "Tomas Guiral". */
+const nucleoNombre = (s) => String(s || '').split(/\s[·|–—-]\s|\(|\//)[0].trim() || String(s || '').trim();
+/** El titulo contiene todas las palabras del nombre (sin tildes ni mayusculas). */
+const coincide = (titulo, nucleo) => {
+  const t = ` ${normal(titulo)} `;
+  const palabras = normal(nucleo).split(' ').filter((w) => w.length > 1);
+  return palabras.length > 0 && palabras.every((w) => t.includes(` ${w} `));
+};
 const normal = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
 const VACIO = /^\s*(|-|—|\[.*\]|☐.*|n\/a)\s*$/i;
@@ -188,4 +214,4 @@ function camposTracker(t) {
   return c;
 }
 
-module.exports = { crearNotion, camposDD, camposTracker };
+module.exports = { crearNotion, camposDD, camposTracker, nucleoNombre, coincide };

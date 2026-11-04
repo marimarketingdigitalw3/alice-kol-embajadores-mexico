@@ -810,7 +810,8 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     const campos = r.campos || {};
     const n = Object.keys(campos).length;
     if (!r.dd && !r.tracker) {
-      return [msg(`No encontre en Notion un "Due Diligence Form - KOL - ${a.nombre}" ni una fila de ${a.nombre} en el tracker. Revisa que el nombre del expediente sea igual al de Notion y que la pagina este compartida con la integracion del bot.`, { titulo: '📥 Notion' })];
+      const buscado = r.buscado || a.nombre;
+      return [msg(`Busque "${buscado}" y no encontre en Notion su "Due Diligence Form - KOL - ${buscado}" ni una fila suya en el tracker.\n\nRevisa que el titulo del DD lleve ese nombre y que la pagina este compartida con la integracion del bot (··· > Conexiones).`, { titulo: '📥 Notion' })];
     }
     a.notion = { ...(a.notion || {}), ...campos };
     a.notionInfo = [r.dd ? 'DD encontrado' : 'sin DD', r.tracker ? 'fila del tracker encontrada' : 'sin fila en el tracker', `${n} datos`].join(' · ');
@@ -818,7 +819,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     guardar();
     const lista = Object.entries(campos).slice(0, 25).map(([k, v]) => `• ${k}: ${String(v).slice(0, 80)}`).join('\n');
     return [msg([
-      r.dd ? `DD: ${r.dd.titulo}` : 'DD: no encontrado',
+      r.dd ? `DD: ${r.dd.titulo}${r.dd.copias > 1 ? ` (hay ${r.dd.copias} paginas con ese nombre: use la original)` : ''}` : 'DD: no encontrado',
       r.tracker ? 'Tracker: fila encontrada' : 'Tracker: sin fila',
       '',
       n ? `Traje ${n} datos. En cada pregunta te los ofrezco con el boton "📥 Usar el de Notion"; los confirmas o los corriges. Ningun paso se marca solo.` : 'La pagina existe pero no encontre datos llenos en la plantilla.',

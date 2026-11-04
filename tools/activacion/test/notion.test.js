@@ -35,6 +35,10 @@ function fakeFetch(url, opts) {
     return ok({ results: [
       { id: 'dd1', object: 'page', url: 'https://notion.so/dd1', last_edited_time: '2026-11-01', parent: { type: 'page_id' },
         properties: { title: { type: 'title', title: rt('Alice · Sub-Agent Channel Due Diligence Form - KOL - Tomás Guiral') } } },
+      { id: 'ddcopia', object: 'page', url: 'https://notion.so/ddcopia', last_edited_time: '2026-11-03', parent: { type: 'page_id' },
+        properties: { title: { type: 'title', title: rt('Alice · Sub-Agent Channel Due Diligence Form - KOL - Tomás Guiral (1)') } } },
+      { id: 'otro', object: 'page', url: 'https://notion.so/otro', last_edited_time: '2026-11-04', parent: { type: 'page_id' },
+        properties: { title: { type: 'title', title: rt('Due Diligence Form - KOL - Tomás Pérez') } } },
       { id: 'tr1', object: 'page', url: 'https://notion.so/tr1', parent: { type: 'database_id' },
         properties: { Channel: { type: 'title', title: rt('Tomas Guiral · TG Bets') }, Region: { type: 'rich_text', rich_text: rt('México') },
           Model: { type: 'select', select: { name: 'Referral link' } }, 'Channel Type': { type: 'select', select: { name: 'Telegram channel' } },
@@ -47,7 +51,8 @@ function fakeFetch(url, opts) {
 
 test('lee el DD y el tracker y los traduce a campos del bot', async () => {
   const n = crearNotion({ token: 'x', fetchImpl: fakeFetch });
-  const r = await n.datosKOL('Tomas Guiral');
+  const r = await n.datosKOL('Tomas Guiral · TG Bets');
+  assert.strictEqual(r.buscado, 'Tomas Guiral');
   assert.ok(r.dd && r.tracker);
   assert.strictEqual(r.campos.fuente, 'Juan Esteban Sierra, por Telegram DM el 12 de octubre');
   assert.strictEqual(r.campos.negociador, 'María del Mar Borrero');
@@ -64,7 +69,7 @@ test('el bot ofrece el dato de Notion en la pregunta y lo valida igual', async (
   const oficina = crearOficina({ stores: { oficina: storeMemoria(), activacion: storeMemoria(), calificacion: storeMemoria() } });
   const u = { id: 1, nombre: 'Maria' };
   oficina.recibir({ usuario: u, texto: '/calificacion' });
-  oficina.motores.c.importar(u, { nombre: 'Tomas Guiral' });
+  oficina.motores.c.importar(u, { nombre: 'Tomas Guiral · TG Bets' });
   const enviados = [];
   const api = { llamar: async () => ({}), enviar: async (chat, s) => enviados.push(...s) };
   const notion = crearNotion({ token: 'x', fetchImpl: fakeFetch });
