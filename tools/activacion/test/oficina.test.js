@@ -30,8 +30,17 @@ function abrir(o) {
   return o.tx('2026-11-06');
 }
 
+function fuente(o) {
+  o.bt('c|h');
+  o.tx('Juanes, llamada por Google Meet reservada en la pagina de Unbound');
+  o.tx('Juan Esteban Sierra (Juanes)');
+  o.tx('Maria del Mar Borrero');
+  o.tx('Llamada de 30 minutos el 6 de noviembre de 2026');
+}
+
 function hastaMetricas(o) {
   abrir(o);
+  fuente(o);
   o.bt('c|h'); o.bt('c|o:chico'); o.bt('c|o:si'); o.bt('c|o:si'); o.bt('c|o:si');
   o.bt('c|h'); o.foto();
   o.bt('c|h'); for (let i = 0; i < 5; i += 1) o.bt('c|o:no');
@@ -46,13 +55,17 @@ test('el menu muestra los tres escritorios', () => {
 test('/llamada abre expediente en Calificacion con el primer paso', () => {
   const o = nueva();
   const out = abrir(o);
-  assert.match(o.todo(out), /Entrar al grupo/);
-  assert.strictEqual(o.pasoC().id, 'q_grupo');
+  assert.match(o.todo(out), /fuente y responsable/);
+  assert.strictEqual(o.pasoC().id, 'q_fuente');
 });
 
 test('grupo de casa con licencia, prueba de 2 minutos y veto bloquean', () => {
   const o = nueva();
   abrir(o);
+  o.bt('c|h');
+  assert.match(o.todo(o.tx('referido por un amigo')), /no se acepta/);
+  o.tx('/cancelar');
+  fuente(o);
   o.bt('c|h');
   assert.match(o.todo(o.bt('c|o:casa')), /otra marca/);
   assert.strictEqual(o.pasoC().id, 'q_grupo');
@@ -109,12 +122,51 @@ test('recorrido completo: llamada -> calificacion -> DD -> activacion -> contrat
   assert.match(o.todo(o.bt('c|o:sistema')), /no quiere manejar dinero/);
   o.bt('c|o:referido'); o.tx('no quiere tocar dinero de nadie');
 
-  // DD form generado
-  o.bt('c|h'); o.tx('ninguno');
-  const dd = o.todo(o.tx('Aprobar, Tier A, empezar con link de referido'));
-  assert.match(dd, /DUE DILIGENCE FORM/);
-  assert.match(dd, /TOTAL SCORE: 80 \/ 100 · TIER A/);
+  // Seccion 2: datos basicos
+  o.bt('c|h');
+  assert.match(o.todo(o.tx('very active community')), /vaga/);
+  ['Correo kol@example.com confirmado por la invitacion', 'Ninguna, sin codigos en sus posts del 1 al 5 de nov', 'Not obtained, nunca tuvo alianza; next step: confirmar por escrito',
+    '15% en USDT semanal (KOL claim)', 'None (KOL claim)', 'Ninguno (KOL claim)', 'Ninguna declarada'].forEach((t) => o.tx(t));
+  // Seccion 4: inventario
+  o.bt('c|h');
+  assert.match(o.todo(o.tx('Picks Pro | t.me/pickspromx')), /4 partes/);
+  o.tx('Picks Pro | https://t.me/pickspromx | 4790 (5 nov) | channel');
+  o.tx('Picks Pro'); o.tx('Es su canal principal y publico');
+  // Seccion 5: analisis a fondo
+  o.bt('c|h'); o.tx('Picks Pro, https://t.me/pickspromx'); o.bt('c|o:canal'); o.bt('c|o:si'); o.tx('4790');
+  o.tx('Vista previa publica, 5 nov 2026'); o.tx('Not obtained, sin TGStat; next step: pedir Telegram Statistics'); o.tx('Vista previa, sin herramienta externa');
+  o.tx('332');
+  const vr = o.todo(o.tx('Conteo manual de 10 posts del 1 al 4 nov'));
+  o.tx('17');
+  assert.match(vr, /6\.9%/);
+  assert.match(vr, /mitad de la mediana/);
+  o.tx('Conteo de posts del 1 al 7 nov'); o.tx('Not obtained, el canal no aparece en TGStat; next step: pedir captura de 6 meses');
+  o.bt('c|o:no'); o.bt('c|o:si'); o.bt('c|o:no'); o.bt('c|o:no');
+  // Seccion 6: perfil de usuarios
+  o.bt('c|h');
+  o.tx('Menos de 30'); o.tx('Not obtained, sin encuesta; next step: encuesta de edad'); o.tx('Agent claim only');
+  assert.match(o.todo(o.tx('no se')), /No se/);
+  o.tx('200 soles (KOL claim)'); o.tx('Not obtained, sin boletos; next step: pedir boletos'); o.tx('Agent claim only, plan: encuesta');
+  ['100 (KOL claim)', '137 suscriptores VIP por captura', 'Captura del canal VIP', 'Betano o Rushbet', 'Not obtained, sin chat; next step: encuesta', 'Agent claim only, plan: encuesta'].forEach((t) => o.tx(t));
+  // Seccion 7: evaluacion (incluye explicar banderas rojas)
+  o.bt('c|h');
+  ['15% sobre ingreso neto, prueba primero', 'Picks Pro', 'Una semana con link rastreado', 'Not obtained, sin historial; next step: medir en la prueba', 'Engagement bajo para su tamano'].forEach((t) => o.tx(t));
+  assert.match(o.todo(o.tx('Suscriptores comprados con publicidad; prueba corta con link rastreado')), /Informacion que no conseguiste/);
+  o.tx('Edad, apuesta y paises; next step: encuesta en el canal');
+  o.tx('El activo real es el canal VIP; prueba corta antes de cualquier fee');
+
+  // DD form generado con el formato de la plantilla
+  o.bt('c|h');
+  const dd = o.todo(o.tx('Canal publico con poco engagement; recomendamos prueba con link rastreado.'));
+  assert.match(dd, /Alice Sub-Agent \/ Channel Due Diligence Form · KOL Picks Pro MX/);
+  assert.match(dd, /## 1\. Source & Accountability/);
+  assert.match(dd, /Score: 80 \/ 100, Tier A/);
+  assert.match(dd, /View rate = avg\. views ÷ subscribers \| 6\.9%/);
+  assert.match(dd, /☒ View rate below half the median/);
+  assert.match(dd, /☒ Reactions ÷ views below 0\.3%/);
+  assert.match(dd, /## 8\. Approval/);
   assert.match(dd, /retiros lentos en Caliente/);
+  assert.ok(!/—/.test(dd), 'sin raya larga');
   o.foto();
 
   // Aprobacion de Stella -> traspaso automatico a Activacion

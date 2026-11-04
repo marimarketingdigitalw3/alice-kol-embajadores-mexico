@@ -110,73 +110,202 @@ function calcularScore(d) {
 }
 
 // ---------------------------------------------------------------------------
-// Due diligence form (para Stella)
+// Reglas del due diligence form (plantilla de Notion, "Instructions")
 // ---------------------------------------------------------------------------
 
+// Descripciones vagas que la plantilla no acepta.
+const VAGOS = [
+  'big volume', 'very active', 'lots of people', 'a lot of', 'many people',
+  'mucho volumen', 'muy activo', 'muy activa', 'mucha gente', 'bastante gente', 'muchos seguidores', 'muchos clientes', 'harta gente',
+];
+const contiene = (n, w) => new RegExp(`(^|[^a-z])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-z]|$)`).test(n);
+
+/**
+ * Campo del due diligence: nunca vacio, nunca vago. "Not obtained" solo con
+ * el motivo y el siguiente paso.
+ */
+const dato = (clave, pregunta, extra = {}) => ({
+  clave,
+  pregunta: `${pregunta}\n(Si no lo conseguiste escribe: Not obtained, motivo y next step.)`,
+  validar: (v) => {
+    const t = String(v).trim();
+    const n = C.normalizar(t);
+    if (t.length < 3) return { ok: false, error: 'La plantilla no acepta campos en blanco. Escribe el dato, o "Not obtained" con el motivo y el siguiente paso.' };
+    if (/^(not obtained|no obtenido)/.test(n)) {
+      if (!/(next step|siguiente paso|proximo paso)/.test(n) || t.length < 30) {
+        return { ok: false, error: '"Not obtained" debe llevar el motivo y el siguiente paso. Ejemplo: Not obtained, el KOL no tiene dashboard; next step: pedir captura de Telegram Statistics.' };
+      }
+      return { ok: true, valor: t };
+    }
+    const vago = VAGOS.find((w) => contiene(n, w));
+    if (vago) return { ok: false, error: `"${vago}" es una descripcion vaga y la plantilla la cuenta como incompleta. Pon el numero o el hecho concreto.` };
+    if (extra.rechazar) {
+      const r = extra.rechazar.find((w) => contiene(n, w));
+      if (r) return { ok: false, error: extra.motivoRechazo || `"${r}" no se acepta en este campo.` };
+    }
+    return { ok: true, valor: t };
+  },
+  ...extra,
+});
+
+// Mediana de view rate por tamano (Benchmarks for Reference).
+const BENCH_VIEW = [
+  [1000, 5000, 31, '1K – 5K'],
+  [5000, 10000, 19, '5K – 10K'],
+  [10000, 20000, null, '10K – 20K'],
+  [20000, 100000, 9.5, '20K – 100K'],
+  [100000, 500000, 6, '100K – 500K'],
+  [500000, Infinity, 3.4, '500K+'],
+];
+
+function evaluarCanal(a) {
+  if (a.dcTipo !== 'canal' || !a.dcSuscriptores) return null;
+  const rate = Math.round((a.dcVistas / a.dcSuscriptores) * 1000) / 10;
+  const b = BENCH_VIEW.find(([min, max]) => a.dcSuscriptores >= min && a.dcSuscriptores < max);
+  const mediana = b ? b[2] : null;
+  const bajo = mediana ? rate < mediana / 2 : false;
+  return { rate, rango: b ? b[3] : 'under 1K', mediana, bajo };
+}
+
+function banderasRojas(a) {
+  const f = [];
+  if (a.dcPico) f.push('Growth curve shows a vertical spike followed by a drop');
+  const ev = evaluarCanal(a);
+  if (ev && ev.bajo) f.push('View rate below half the median for its size range');
+  if (a.dcReacciones) f.push('Reactions ÷ views below 0.3%');
+  if (a.dcRenombrado) f.push('Channel has been renamed or switched content niche');
+  if (a.dcAvatares) f.push('Many members with blank avatars / no username');
+  if (a.dcPublico === false) f.push('Private or invite-only; public data cannot be verified');
+  return f;
+}
+
+// ---------------------------------------------------------------------------
+// Due diligence form con el formato de la plantilla de Notion
+// ---------------------------------------------------------------------------
+
+const MODELO_EN = { sistema: 'Agent system', referido: 'Referral link', ambos: 'Both (different customers)' };
+const CANAL_EN = { canal: 'Telegram channel', grupo: 'Telegram group', master: 'Master agent', sub: 'Sub-agent', kol: 'KOL (X / Instagram / Discord)', facebook: 'Facebook' };
+
 function ddForm(a) {
+  const v = (x) => (x === undefined || x === null || x === '' ? 'Not obtained' : String(x));
   const yn = (b) => (b ? 'Yes' : 'No');
+  const fecha = new Date().toISOString().slice(0, 10);
   const m = a.mensajes !== undefined ? evaluarMetricas(a) : null;
-  const sc = a.score !== undefined ? a : null;
-  const lineas = [
-    'KOL / CHANNEL DUE DILIGENCE FORM',
-    `Prepared by: ${a.bd} · Date: ${new Date().toISOString().slice(0, 10)}`,
-    '',
-    '1. IDENTITY',
-    `KOL / channel: ${a.nombre}`,
-    `Lead sheet #: ${a.numeroSheet || '-'}`,
-    `Platform / handle: ${a.handle || '-'}`,
-    `Group or channel link: ${a.linkGrupo || '-'}`,
-    `Channel type: ${({ canal: 'Telegram channel', grupo: 'Telegram group', master: 'Master agent', sub: 'Sub-agent', kol: 'KOL (X / Instagram / Discord)', facebook: 'Facebook' })[a.tipoCanal] || '-'}`,
-    `Group type observed: ${GRUPO_EN[a.tipoGrupo] || '-'}`,
-    `Owner and key people: ${a.personasClave || '-'}`,
-    '',
-    '2. REGION AND LANGUAGE',
-    `Customers' region: ${a.regionClientes || '-'}`,
-    `Customers' language: ${a.idioma || '-'}`,
-    'Restricted regions / Mainland China: checked, none',
-    '',
-    '3. VETO CHECK',
-    ...VETOS.map(([k]) => `${VETOS_EN[k]}: ${yn(a[k])}`),
-    '',
-    '4. ACTIVITY (LAST 24 HOURS)',
-    ...(m ? m.reglas.map(([, ok, v], i) => `${METRICAS_EN[i]}: ${v.replace('min', 'min.').replace('entre', 'between').replace(' y ', ' and ')} ${ok ? 'PASS' : 'FAIL'}`) : ['-']),
-    `Observed during live matches on: ${a.fechaObservacion ? a.fechaObservacion.slice(0, 10) : '-'}`,
-    '',
-    '5. SCORECARD',
-    ...SCORECARD.map(([k, pts]) => `${k} (${pts}): ${yn(a[`sc${k}`])} · ${SCORECARD_EN[k]}`),
-    `Bonus: ${a.bonus || 0} · ${a.bonusMotivo || '-'}`,
-    `TOTAL SCORE: ${sc ? sc.score : '-'} / 100 · TIER ${sc ? sc.tier : '-'}`,
-    '',
-    '6. FINAL TEST',
-    `Can name the owner and two key people: ${yn(a.pf1)}`,
-    `5+ slips this week from different people: ${yn(a.pf2)}`,
-    `Someone explained why they bet, not just what: ${yn(a.pf3)}`,
-    `Owner / admin added something useful in last 24 h: ${yn(a.pf4)}`,
-    `Every veto item checked: ${yn(a.pf5)}`,
-    '',
-    '7. MARKET INTEL',
-    `Competitors seen (apps in slips, pinned codes): ${a.competidores || '-'}`,
-    `Player complaints about current platform: ${a.quejas || '-'}`,
-    '',
-    '8. FIRST CALL',
-    `Date: ${a.fechaLlamada ? a.fechaLlamada.slice(0, 10) : '-'}`,
-    `Customers (total / known personally): ${a.clientes ?? '-'} / ${a.conocidos ?? '-'}`,
-    `Working with another platform: ${a.otraPlataforma || '-'}`,
-    `Willing to handle customers' money: ${a.manejaDinero === undefined ? '-' : yn(a.manejaDinero)}`,
-    `Estimated turnover: ${a.volumen || '-'}`,
-    `Has EVM wallet (OKX / Binance): ${a.tieneWallet === undefined ? '-' : yn(a.tieneWallet)}`,
-    '',
-    '9. CHOSEN PATH',
-    `Model: ${({ sistema: 'Agent system', referido: 'Referral link', ambos: 'Both (different customers)' })[a.modelo] || '-'}`,
-    `Reason: ${a.motivoCamino || '-'}`,
-    '',
-    '10. RISKS AND BD RECOMMENDATION',
-    `Risks / observations: ${a.riesgos || '-'}`,
-    `BD recommendation: ${a.recomendacion || '-'}`,
-    '',
-    'Approval needed: Stella (the contract is a separate approval).',
-  ];
-  return lineas.join('\n');
+  const ev = evaluarCanal(a);
+  const flags = banderasRojas(a);
+  const box = (b) => (b ? '☒' : '☐');
+  const canales = String(a.inventario || '').split('\n').filter((l) => l.trim());
+  const L = [];
+
+  L.push(`# Alice Sub-Agent / Channel Due Diligence Form · KOL ${v(a.nombre)}`);
+  L.push(`v1.0 | ${fecha} | Sportsbook channels`);
+  L.push('');
+  L.push('### Main Channels Information');
+  L.push(`- Channel links: ${v(a.linkGrupo)}`);
+  L.push(`- Audience: ${a.dcSuscriptores ? `${a.dcSuscriptores} ${a.dcTipo === 'grupo' ? 'members' : 'subscribers'}` : 'Not obtained'}`);
+  L.push(`- Benchmark Score: ${a.score !== undefined ? `${a.score}/100, Tier ${a.tier}` : 'Not obtained'}`);
+  L.push(`- Bottom line: ${v(a.conclusion)}`);
+  L.push('');
+  L.push('## Instructions (Required Reading for the Negotiator)');
+  L.push('The Negotiator obtains and verifies every data point and is accountable for all of it. Verbal claims are for reference only. Every data point states how it was obtained; anything missing says "Not obtained" with the reason and next step. Blank or vague entries make the form incomplete.');
+  L.push('');
+  L.push('## 1. Source & Accountability');
+  L.push(`| Lead source | ${v(a.fuente)} |`);
+  L.push(`| Lead provider | ${v(a.proveedor)} |`);
+  L.push(`| Negotiator | ${v(a.negociador || a.bd)} |`);
+  L.push(`| Date of first contact | ${v(a.primerContacto)} |`);
+  L.push(`| Form submission date | ${fecha} |`);
+  L.push('');
+  L.push(`## Community Scorecard (${fecha}, aligned with Group Chat Portraits)`);
+  L.push(`Score: ${a.score !== undefined ? `${a.score} / 100, Tier ${a.tier}` : 'Not obtained'}. Scope: ${v(a.linkGrupo)}. Observed during live matches on ${a.fechaObservacion ? a.fechaObservacion.slice(0, 10) : 'Not obtained'}.`);
+  for (const [k, pts] of SCORECARD) L.push(`- ${k} · ${SCORECARD_EN[k]} (${pts}): ${a[`sc${k}`] ? `✓ ${pts}` : '✗ 0'}`);
+  L.push(`- Bonus (up to 32): +${a.bonus || 0}. ${v(a.bonusMotivo)}`);
+  if (m) {
+    L.push(`Five numbers (last 24 h): ${a.mensajes} messages; ${a.personas} speakers; top-5 share ${a.top5}%; ${a.boletos} slips this week; ${a.menciones} platform mentions per day. Targets: ≥ 50 messages, ≥ 8 speakers, top-5 share 40 to 75%, ≥ 5 slips per week, ≥ 1 platform mention per day. Result: ${m.reglas.filter((r) => r[1]).length} of 5 met.`);
+  }
+  L.push(`Veto check: ${VETOS.map(([k], i) => `(${i + 1}) ${VETOS_EN[k]}: ${a[k] === undefined ? 'Not obtained' : yn(a[k])}`).join('. ')}.`);
+  L.push(`Group type: ${GRUPO_EN[a.tipoGrupo] || 'Not obtained'}.`);
+  L.push(`Quick test: (1) Owner and two key people named? ${yn(a.pf1)} (2) 5+ slips this week from different people? ${yn(a.pf2)} (3) Someone explains why they bet? ${yn(a.pf3)} (4) Owner said something useful in 24 h? ${yn(a.pf4)} (5) Every veto item checked? ${yn(a.pf5)}`);
+  L.push(`Roles (owner and key people): ${v(a.personasClave)}`);
+  L.push(`Competitors (pinned message, promo codes, app in slips): ${v(a.competidores)}. Player complaints: ${v(a.quejas)}`);
+  L.push('');
+  L.push('## 2. Sub-Agent Basic Information');
+  L.push(`| Nickname / Telegram handle | ${v(a.handle)} |`);
+  L.push(`| Other contact details | ${v(a.otrosContactos)} |`);
+  L.push(`| Regions covered | ${v(a.regionClientes)} (customers' language: ${v(a.idioma)}) |`);
+  L.push(`| Platforms currently partnered with | ${v(a.plataformaActual)} |`);
+  L.push(`| How long partnered | ${v(a.tiempoAlianza)} |`);
+  L.push(`| Current commission rate & settlement method | ${v(a.comisionActual)}. Deductions: ${v(a.deducciones)} |`);
+  L.push(`| Sub-agents under them / tiers / size | ${v(a.subagentes)} |`);
+  L.push(`| Any relationship with Alice staff | ${v(a.relacionAlice)} |`);
+  L.push(`Regions Covered: ${box(/mexic|latam|colombi|peru|argentin|chile|ecuador|venezuel|guatemal|bolivi|uruguay|paraguay/.test(C.normalizar(a.regionClientes || '')))} Mexico · LATAM ☐ Russia · CIS ☐ South Korea ☐ Southeast Asia ☐ Overseas Chinese ☐ Other`);
+  L.push('');
+  L.push('## 3. Promotion Channel Types');
+  L.push(`${box(a.tipoCanal === 'canal')} Telegram channel ${box(a.tipoCanal === 'grupo')} Telegram group ${box(a.tipoCanal === 'kol')} X / Instagram / Discord ${box(a.tipoCanal === 'facebook')} Facebook ${box(a.dcPublico === false)} Non-public / individual agent`);
+  L.push('');
+  L.push('## 4. Channel Inventory (Complete)');
+  L.push('| # | Channel name | Link | Followers / members | Type |');
+  canales.forEach((c, i) => L.push(`| ${i + 1} | ${c.split('|').map((x) => x.trim()).join(' | ')} |`));
+  L.push(`Primary channels selected for deep dive: ${v(a.principales)}. Reason for selection: ${v(a.razonPrincipales)}`);
+  L.push('');
+  L.push('## 5. Primary Channel Deep Dive');
+  L.push(`Channel ①: ${v(a.dcNombre)} · Type: ${a.dcTipo === 'grupo' ? 'Group (no view counter)' : 'Channel (has view counter)'} · Publicly verifiable: ${a.dcPublico === false ? 'Private / invite-only' : 'Public'}`);
+  if (a.dcTipo === 'grupo') {
+    L.push('| Metric | Value | How obtained |');
+    L.push(`| Members | ${v(a.dcSuscriptores)} | ${v(a.dcSuscriptoresComo)} |`);
+    L.push(`| Unique speakers today | ${v(a.dcHablantes)} | ${v(a.dcHablantesComo)} |`);
+    L.push(`| Daily active rate | ${a.dcSuscriptores && a.dcHablantes !== undefined ? `${Math.round((a.dcHablantes / a.dcSuscriptores) * 1000) / 10}%` : 'Not obtained'} | Calculated |`);
+    L.push(`| Avg. messages per day | ${v(a.dcMensajesDia)} | ${v(a.dcMensajesComo)} |`);
+  } else {
+    L.push('| Metric | Value | How obtained |');
+    L.push(`| Subscribers (as displayed) | ${v(a.dcSuscriptores)} | ${v(a.dcSuscriptoresComo)} |`);
+    L.push(`| Verified subscribers | ${v(a.dcVerificados)} | ${v(a.dcVerificadosComo)} |`);
+    L.push(`| Avg. views, last 10 posts | ${v(a.dcVistas)} | ${v(a.dcVistasComo)} |`);
+    L.push(`| View rate = avg. views ÷ subscribers | ${ev ? `${ev.rate}%` : 'Not obtained'} | Calculated. ${ev && ev.mediana ? `Median for ${ev.rango}: ~${ev.mediana}%; review threshold ${ev.mediana / 2}%.${ev.bajo ? ' Below half the median.' : ''}` : ''} |`);
+    L.push(`| Posting frequency (posts / week) | ${v(a.dcPostsSemana)} | ${v(a.dcPostsComo)} |`);
+    L.push(`| 6-month growth curve | ${v(a.dcCrecimiento)} | TGStat / Telemetr / Telegram Statistics |`);
+  }
+  L.push('Red Flag Check:');
+  ['Growth curve shows a vertical spike followed by a drop', 'View rate below half the median for its size range', 'Reactions ÷ views below 0.3%', 'Channel has been renamed or switched content niche', 'Many members with blank avatars / no username', 'Private or invite-only; public data cannot be verified']
+    .forEach((f) => L.push(`${box(flags.includes(f))} ${f}`));
+  L.push('');
+  L.push('## 6. User & Betting Profile');
+  L.push('| Item | Sub-agent claims | Negotiator verified | Verification method |');
+  L.push(`| Age distribution | ${v(a.edadDice)} | ${v(a.edadVerif)} | ${v(a.edadMetodo)} |`);
+  L.push(`| Est. average bet size | ${v(a.apuestaDice)} | ${v(a.apuestaVerif)} | ${v(a.apuestaMetodo)} |`);
+  L.push(`| Est. monthly active bettors | ${v(a.activosDice)} | ${v(a.activosVerif)} | ${v(a.activosMetodo)} |`);
+  L.push(`| Where they currently bet | ${v(a.dondeDice)} | ${v(a.dondeVerif)} | ${v(a.dondeMetodo)} |`);
+  L.push(`| Customers (total / known personally) | ${v(a.clientes)} / ${v(a.conocidos)} | | First call |`);
+  L.push('');
+  L.push('## 7. Negotiator Assessment & Recommendation');
+  L.push(`| Chosen path | ${MODELO_EN[a.modelo] || 'Not obtained'}. ${v(a.motivoCamino)} |`);
+  L.push(`| Proposed commission rate & rationale | ${v(a.tasaPropuesta)} |`);
+  L.push(`| Proposed first launch channels (1–2) | ${v(a.canalesLanzamiento)} |`);
+  L.push(`| Proposed trial budget & observation period | ${v(a.presupuestoPrueba)} |`);
+  L.push(`| Est. first-month GGR range & basis | ${v(a.ggrEstimado)} |`);
+  L.push(`| Identified risks | ${v(a.riesgos)} |`);
+  L.push(`| Red flag explanations | ${flags.length ? v(a.explicacionBanderas) : 'No red flags ticked'} |`);
+  L.push(`| Information not obtained & next steps | ${v(a.pendientes)} |`);
+  L.push('');
+  L.push('## 8. Approval (filled in by the approver, Stella)');
+  L.push('| Decision | ☐ Approved ☐ Revisit after more info ☐ Rejected |');
+  L.push('| Approved commission rate | |');
+  L.push('| Approved launch channels | |');
+  L.push('| Trial budget & observation period | |');
+  L.push('| Additional conditions | |');
+  L.push('| Approver / Date | |');
+  L.push('This form is used together with the "Alice · BD Channel Incentive Policy". The contract is a separate approval.');
+  L.push('');
+  L.push('## Answers from the KOL (first call)');
+  L.push(`- Customers' region: ${v(a.regionClientes)} · Language: ${v(a.idioma)}`);
+  L.push(`- Customers: ${v(a.clientes)}, known personally: ${v(a.conocidos)}`);
+  L.push(`- Other platform now: ${v(a.otraPlataforma)}`);
+  L.push(`- Willing to handle customers' money: ${a.manejaDinero === undefined ? 'Not obtained' : yn(a.manejaDinero)} · Estimated turnover: ${v(a.volumen)}`);
+  L.push(`- EVM wallet (OKX / Binance): ${a.tieneWallet === undefined ? 'Not obtained' : yn(a.tieneWallet)}`);
+  L.push('');
+  L.push('## Summary');
+  L.push(v(a.resumen));
+  return L.join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -184,14 +313,35 @@ function ddForm(a) {
 // ---------------------------------------------------------------------------
 
 const FASES = [
+  { id: 'Q0', nombre: 'Fuente y responsable (seccion 1 del DD)', etapa: 'Calificando' },
   { id: 'Q1', nombre: 'Observar el grupo', etapa: 'Calificando' },
   { id: 'Q2', nombre: 'Lista de veto', etapa: 'Calificando' },
   { id: 'Q3', nombre: 'Metricas, scorecard y prueba final', etapa: 'Calificando' },
   { id: 'Q4', nombre: 'Primera llamada', etapa: 'Primera llamada', plazo: 'el dia agendado' },
-  { id: 'Q5', nombre: 'Due diligence form', etapa: 'DD con Stella' },
+  { id: 'Q5', nombre: 'Datos del sub-agente y canales (secciones 2 a 6 del DD)', etapa: 'Armando DD' },
+  { id: 'Q6', nombre: 'Due diligence form', etapa: 'DD con Stella' },
 ];
 
 const PASOS = [
+  {
+    id: 'q_fuente',
+    fase: 'Q0',
+    titulo: 'Sección 1 del DD: fuente y responsable',
+    que: [
+      'El negociador obtiene y verifica toda la informacion del formulario y responde por ella.',
+      'La fuente debe decir persona, ocasion o plataforma. "Lo refirio un amigo" no se acepta.',
+    ],
+    prueba: {
+      tipo: 'formulario',
+      pide: 'Completa la seccion 1 del due diligence form.',
+      campos: [
+        dato('fuente', 'Fuente del lead (persona, ocasion o plataforma; como llego la llamada):', { rechazar: ['referred by a friend', 'referido por un amigo', 'lo refirio un amigo', 'un amigo'], motivoRechazo: '"Referido por un amigo" no se acepta: di quien, en que ocasion o por que plataforma.' }),
+        dato('proveedor', 'Quien trajo el lead (lead provider):'),
+        dato('negociador', 'Negociador (quien responde por este formulario):'),
+        dato('primerContacto', 'Fecha y forma del primer contacto (llamada, reserva, mensaje):'),
+      ],
+    },
+  },
   {
     id: 'q_grupo',
     fase: 'Q1',
@@ -457,19 +607,165 @@ const PASOS = [
     },
   },
   {
-    id: 'q_dd',
+    id: 'q_basico',
     fase: 'Q5',
-    titulo: 'Armar y enviar el due diligence form a Stella',
+    titulo: 'Sección 2 del DD: datos básicos del sub-agente',
     que: [
-      'El formulario se arma solo con todo lo que registraste. Revisa que nada este inventado.',
-      'El DD y el contrato son dos aprobaciones separadas, ambas de Stella. No se juntan ni se saltan.',
+      '"Que plataforma usa hoy, que tasa y que se le descuenta": los tres son obligatorios.',
+      'Si no sabe responder o es vago, probablemente no tiene experiencia real. No cortes la conversacion: sigue guiandolo y anotalo.',
+      'Toda relacion con alguien del equipo de Alice se declara.',
     ],
     prueba: {
       tipo: 'formulario',
-      pide: 'Completa las dos ultimas secciones del formulario.',
+      pide: 'Completa la seccion 2 del due diligence form.',
       campos: [
-        texto('riesgos', 'Riesgos u observaciones (escribe "ninguno" si no hay):'),
-        texto('recomendacion', 'Tu recomendacion para Stella (ej. "Aprobar, Tier A, empezar con sistema de agentes con sus 10 clientes mas cercanos"):', 10),
+        dato('otrosContactos', 'Otros contactos (WhatsApp, correo) y como los confirmaste:'),
+        dato('plataformaActual', 'Plataformas con las que trabaja hoy y como lo verificaste (ej. sin links ni codigos en sus posts del X al Y):'),
+        dato('tiempoAlianza', 'Cuanto tiempo lleva o llevo con cada plataforma (y prueba pedida):'),
+        dato('comisionActual', 'Tasa actual y forma de pago (frecuencia y metodo):'),
+        dato('deducciones', 'Que le descuentan de su comision (bonos, costos, chargebacks), o "None (KOL claim)":'),
+        dato('subagentes', 'Sub-agentes bajo el, cuantos niveles y tamano aproximado:'),
+        dato('relacionAlice', 'Relacion con alguien del equipo de Alice (debe declararse):'),
+      ],
+    },
+  },
+  {
+    id: 'q_canales',
+    fase: 'Q5',
+    titulo: 'Sección 4 del DD: inventario completo de canales',
+    que: ['Todos los canales, uno por fila. Esta seccion es solo de registro.', 'Despues elige hasta 3 canales principales para el analisis a fondo.'],
+    prueba: {
+      tipo: 'formulario',
+      pide: 'Registra todos sus canales.',
+      campos: [
+        {
+          clave: 'inventario',
+          pregunta: 'Un canal por linea con este formato:\nNombre | Link | Seguidores o miembros (y fecha) | Tipo (channel / group / social / other)',
+          validar: (v) => {
+            const lineas = String(v).split('\n').map((l) => l.trim()).filter(Boolean);
+            if (!lineas.length) return { ok: false, error: 'Registra al menos un canal.' };
+            const mala = lineas.find((l) => l.split('|').length !== 4 || l.split('|').some((p) => !p.trim()));
+            if (mala) return { ok: false, error: `Esta linea no tiene las 4 partes separadas por "|": ${mala}` };
+            return { ok: true, valor: lineas.join('\n') };
+          },
+        },
+        dato('principales', 'Canales principales para el analisis a fondo (maximo 3):'),
+        dato('razonPrincipales', 'Por que elegiste esos canales:'),
+      ],
+    },
+  },
+  {
+    id: 'q_deep',
+    fase: 'Q5',
+    titulo: 'Sección 5 del DD: análisis a fondo del canal principal',
+    que: [
+      'Las metricas de canal y de grupo NO son intercambiables: un grupo no tiene contador de vistas, asi que cualquier cifra de "vistas" en un grupo es inventada.',
+      'Cada numero dice como se obtuvo. Adjunta capturas de los ultimos 10 posts con las vistas visibles.',
+      'Mediana de view rate: 1K-5K ~31%, 5K-10K ~19%, 20K-100K ~9-10%, 100K-500K ~6%, 500K+ ~3.4%. Menos de la mitad de la mediana es bandera roja.',
+    ],
+    prueba: {
+      tipo: 'formulario',
+      pide: 'Datos del canal principal.',
+      campos: [
+        dato('dcNombre', 'Nombre y link del canal principal:'),
+        { clave: 'dcTipo', pregunta: 'Es canal (con contador de vistas) o grupo (sin contador)?', opciones: [['canal', 'Canal'], ['grupo', 'Grupo']], validar: (v) => (['canal', 'grupo'].includes(v) ? { ok: true, valor: v } : { ok: false, error: 'Elige canal o grupo.' }) },
+        sino('dcPublico', 'Es publico (los datos se pueden verificar)?'),
+        num('dcSuscriptores', 'Suscriptores o miembros que muestra hoy:'),
+        dato('dcSuscriptoresComo', 'Como obtuviste ese numero (fuente y fecha):'),
+        { ...dato('dcVerificados', 'Suscriptores verificados (sin falsos o inflados):'), aplica: (a) => a.dcTipo === 'canal' },
+        { ...dato('dcVerificadosComo', 'Como lo verificaste:'), aplica: (a) => a.dcTipo === 'canal' },
+        { ...num('dcVistas', 'Vistas promedio de los ultimos 10 posts:'), aplica: (a) => a.dcTipo === 'canal' },
+        { ...dato('dcVistasComo', 'Como lo contaste (posts, fechas, excluiste posts recientes?):'), aplica: (a) => a.dcTipo === 'canal' },
+        {
+          ...num('dcPostsSemana', 'Posts por semana:'),
+          aplica: (a) => a.dcTipo === 'canal',
+          antes: (a) => {
+            const ev = evaluarCanal(a);
+            return ev ? [{ titulo: '📊 View rate', texto: `${ev.rate}% (${a.dcVistas} / ${a.dcSuscriptores}).${ev.mediana ? ` Mediana para ${ev.rango}: ~${ev.mediana}%.${ev.bajo ? ' 🚩 Esta por debajo de la mitad de la mediana: tendras que explicarlo en la seccion 7.' : ''}` : ''}` }] : [];
+          },
+        },
+        { ...dato('dcPostsComo', 'Como obtuviste la frecuencia:'), aplica: (a) => a.dcTipo === 'canal' },
+        { ...dato('dcCrecimiento', 'Curva de crecimiento de 6 meses (TGStat, Telemetr o Telegram Statistics):'), aplica: (a) => a.dcTipo === 'canal' },
+        { ...num('dcHablantes', 'Personas distintas que hablaron hoy:'), aplica: (a) => a.dcTipo === 'grupo' },
+        { ...dato('dcHablantesComo', 'Como lo contaste:'), aplica: (a) => a.dcTipo === 'grupo' },
+        { ...num('dcMensajesDia', 'Mensajes promedio por dia:'), aplica: (a) => a.dcTipo === 'grupo' },
+        { ...dato('dcMensajesComo', 'Como lo contaste:'), aplica: (a) => a.dcTipo === 'grupo' },
+        sino('dcPico', 'La curva muestra un pico vertical seguido de una caida?'),
+        sino('dcReacciones', 'Las reacciones son menos del 0.3% de las vistas?'),
+        sino('dcRenombrado', 'El canal cambio de nombre o de tema?'),
+        sino('dcAvatares', 'Muchos miembros sin foto o sin username?'),
+      ],
+    },
+  },
+  {
+    id: 'q_audiencia',
+    fase: 'Q5',
+    titulo: 'Sección 6 del DD: perfil de usuarios y apuestas',
+    que: [
+      'Dos columnas lado a lado: lo que dice el sub-agente y lo que verificaste tu. Las diferencias grandes son donde se enfoca la negociacion.',
+      '"No se" o "el agente no dijo" no se acepta para la apuesta promedio. Fuentes por confiabilidad: capturas de su back office, preguntar en la comunidad, contar los boletos publicados, hablar 1 a 1 con 3 a 5 miembros, lo que dice el agente.',
+      '"Agent claim only" se acepta, pero es la confiabilidad mas baja y necesita un plan de verificacion.',
+    ],
+    prueba: {
+      tipo: 'formulario',
+      pide: 'Completa la seccion 6 del due diligence form.',
+      campos: [
+        dato('edadDice', 'Edad, lo que dice el agente (menos de 30 / 30-40 / 40+):'),
+        dato('edadVerif', 'Edad, lo que verificaste:'),
+        dato('edadMetodo', 'Edad, metodo de verificacion:'),
+        dato('apuestaDice', 'Apuesta promedio, lo que dice el agente (con moneda):', { rechazar: ['no se', 'no sabe', 'dont know', "don't know", 'no dijo'], motivoRechazo: '"No se" no se acepta para la apuesta promedio. Pregunta en la comunidad o cuenta los boletos publicados.' }),
+        dato('apuestaVerif', 'Apuesta promedio, lo que verificaste:'),
+        dato('apuestaMetodo', 'Apuesta promedio, metodo (si es solo su palabra escribe "Agent claim only" y el plan):'),
+        dato('activosDice', 'Apostadores activos al mes, lo que dice el agente:'),
+        dato('activosVerif', 'Apostadores activos al mes, lo que verificaste:'),
+        dato('activosMetodo', 'Apostadores activos, metodo de verificacion:'),
+        dato('dondeDice', 'Donde apuestan hoy, lo que dice el agente:'),
+        dato('dondeVerif', 'Donde apuestan hoy, lo que verificaste:'),
+        dato('dondeMetodo', 'Donde apuestan, metodo de verificacion:'),
+      ],
+    },
+  },
+  {
+    id: 'q_propuesta',
+    fase: 'Q6',
+    titulo: 'Sección 7 del DD: evaluación y recomendación del negociador',
+    que: [
+      'No ofrezcas tasas al KOL: esto es tu propuesta para Stella.',
+      'Cada bandera roja marcada en la seccion 5 se explica aqui.',
+    ],
+    prueba: {
+      tipo: 'formulario',
+      pide: 'Completa la seccion 7 del due diligence form.',
+      campos: [
+        dato('tasaPropuesta', 'Tasa de comision propuesta y por que:'),
+        dato('canalesLanzamiento', 'Canales para el primer lanzamiento (1 o 2):'),
+        dato('presupuestoPrueba', 'Presupuesto de prueba y periodo de observacion:'),
+        dato('ggrEstimado', 'Rango de GGR estimado del primer mes y en que se basa:'),
+        dato('riesgos', 'Riesgos identificados:'),
+        {
+          ...dato('explicacionBanderas', 'Explica cada bandera roja marcada:'),
+          aplica: (a) => banderasRojas(a).length > 0,
+          antes: (a) => [{ titulo: '🚩 Banderas rojas marcadas', texto: banderasRojas(a).map((f) => `• ${f}`).join('\n') }],
+        },
+        dato('pendientes', 'Informacion que no conseguiste y siguientes pasos:'),
+        dato('conclusion', 'Conclusion en una o dos frases (cual es el activo real y que trato tiene sentido):'),
+      ],
+    },
+  },
+  {
+    id: 'q_dd',
+    fase: 'Q6',
+    titulo: 'Armar y enviar el due diligence form a Stella',
+    que: [
+      'El formulario se arma solo con el formato de la plantilla de Notion (Alice Sub-Agent / Channel Due Diligence Form) y todo lo que registraste. Revisa que nada este inventado.',
+      'Crea la pagina en Notion con ese contenido y adjunta las capturas en el apendice (A: estadisticas, B: precios, C: ultimos posts, D: seguimiento).',
+      'La seccion 8 (Approval) la llena Stella. El DD y el contrato son dos aprobaciones separadas.',
+    ],
+    prueba: {
+      tipo: 'formulario',
+      pide: 'Escribe el resumen final y te armo el formulario completo.',
+      campos: [
+        dato('resumen', 'Resumen final (canales, activo real, engagement, audiencia, trato propuesto, recomendacion y lo que sigue abierto):'),
         {
           clave: 'capturaEnvio',
           tipo: 'foto',
@@ -483,7 +779,7 @@ const PASOS = [
   },
   {
     id: 'q_dd_aprobado',
-    fase: 'Q5',
+    fase: 'Q6',
     titulo: 'Stella aprobo el due diligence form',
     que: ['Sin esta aprobacion no se agenda la segunda llamada ni se habla de contrato.', 'Si Stella lo rechaza: /detener con su motivo y actualiza el sheet.'],
     prueba: { tipo: 'captura', pide: 'Captura de la aprobacion de Stella.' },
@@ -537,4 +833,4 @@ const FLUJO_CALIFICACION = {
   cierre: (a) => [{ titulo: `✅ ${a.nombre} · DD aprobado`, texto: 'Este expediente ya paso al escritorio de Activacion. Usa /activacion para seguir.' }],
 };
 
-module.exports = { FLUJO_CALIFICACION, ddForm, calcularScore, evaluarMetricas, HORA };
+module.exports = { FLUJO_CALIFICACION, ddForm, calcularScore, evaluarMetricas, evaluarCanal, banderasRojas, VAGOS, HORA };
