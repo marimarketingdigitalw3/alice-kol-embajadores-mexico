@@ -7,16 +7,16 @@ Tu trabajo empieza cuando un KOL CONFIRMA LA PRIMERA LLAMADA (lo consigue el enc
 Fuente del proceso: "LATAM - BD guide (EN)" en Notion (https://app.notion.com/p/3f9eaf522171816cbbd5dd6995b27c25), etapas 2 (Qualify) y 3 (First contact). Leela al empezar con el conector de Notion. Si cambio algo frente a estas instrucciones, manda la guia y avisalo en el reporte.
 
 ## CUENTA DE TRABAJO (OBLIGATORIO)
-Esta tarea trabaja SOLO con la cuenta de Google mborrero@unboundoperators.com: Gmail, Google Calendar (calendarId = mborrero@unboundoperators.com) y Google Drive.
+Esta tarea trabaja SOLO con la cuenta de Google mborrero@unboundoperators.com: Gmail y Google Drive. No usa Google Calendar.
 Antes de empezar, comprueba con Gmail (busqueda in:sent) que el remitente sea mborrero@unboundoperators.com. Si el conector devuelve otra cuenta (por ejemplo una @gmail.com personal), no sigas: no uses datos de esa cuenta, no entregues archivo y envia solo una notificacion corta diciendo que el conector esta en la cuenta equivocada.
 
 ## 1. DE DONDE SALEN LOS KOLs DE HOY
 
 1. Sheet de outreach: https://docs.google.com/spreadsheets/d/1YbjjvoEaaJ9PuHn5s1JVEdKJzoPpvgJzUAJhatxeMvo/edit?gid=1619343648 . Descargalo con el conector de Google Drive (download_file_content con exportMimeType application/vnd.openxmlformats-officedocument.spreadsheetml.sheet) y procesalo con python y openpyxl. Pestanas: Leads (trabajo), Summary ("Open conversations"), How we score (referencia).
-2. Google Calendar de mborrero@unboundoperators.com: eventos de ALICE AI en los proximos 7 dias y en los ultimos 2 dias (titulo con "ALICE", o agendados desde unboundoperators.app/book/maria/alice-ai). Usa solo el calendario de esa cuenta; las invitaciones que lleguen a su Gmail sirven de respaldo.
+2. Invitaciones de calendario en el Gmail de mborrero@unboundoperators.com: llamadas de ALICE AI en los proximos 7 dias y en los ultimos 2 dias (asunto o cuerpo con "ALICE", invitaciones de Google Calendar, o reservas desde unboundoperators.app/book/maria/alice-ai). No hay conector de Calendar: no lo menciones en Alertas.
 3. Gmail de mborrero@unboundoperators.com: confirmaciones de llamada de la campana.
 
-Un KOL entra hoy si tiene PRIMERA LLAMADA CONFIRMADA (evento en calendario o confirmacion escrita) y en Team Notes o Next step no consta todavia que su due diligence se envio a Stella. Cruza el evento con la fila del sheet por nombre, handle o correo. Si no encuentras su fila, reportalo como "Llamada sin fila en el sheet".
+Un KOL entra hoy si tiene PRIMERA LLAMADA CONFIRMADA (invitacion de calendario recibida en Gmail o confirmacion escrita) y en Team Notes o Next step no consta todavia que su due diligence se envio a Stella. Cruza el evento con la fila del sheet por nombre, handle o correo. Si no encuentras su fila, reportalo como "Llamada sin fila en el sheet".
 
 Nunca califiques a alguien sin llamada confirmada. Nunca califiques leads con Tier = Veto o con contenido en la columna Veto: reportalos en Alertas.
 
