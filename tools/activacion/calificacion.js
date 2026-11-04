@@ -197,8 +197,10 @@ function ddForm(a) {
   const canales = String(a.inventario || '').split('\n').filter((l) => l.trim());
   const L = [];
 
-  L.push(`# Alice Sub-Agent / Channel Due Diligence Form · KOL ${v(a.nombre)}`);
+  L.push(`# Alice · Sub-Agent Channel Due Diligence Form - KOL - ${v(a.nombre)}`);
   L.push(`v1.0 | ${fecha} | Sportsbook channels`);
+  L.push('');
+  L.push(`### Due Diligence Form : ${a.linkDoc || '[Google Doc link]'}`);
   L.push('');
   L.push('### Main Channels Information');
   L.push(`- Channel links: ${v(a.linkGrupo)}`);
@@ -241,7 +243,14 @@ function ddForm(a) {
   L.push(`Regions Covered: ${box(/mexic|latam|colombi|peru|argentin|chile|ecuador|venezuel|guatemal|bolivi|uruguay|paraguay/.test(C.normalizar(a.regionClientes || '')))} Mexico · LATAM ☐ Russia · CIS ☐ South Korea ☐ Southeast Asia ☐ Overseas Chinese ☐ Other`);
   L.push('');
   L.push('## 3. Promotion Channel Types');
-  L.push(`${box(a.tipoCanal === 'canal')} Telegram channel ${box(a.tipoCanal === 'grupo')} Telegram group ${box(a.tipoCanal === 'kol')} X / Instagram / Discord ${box(a.tipoCanal === 'facebook')} Facebook ${box(a.dcPublico === false)} Non-public / individual agent`);
+  L.push('Tick all that apply.');
+  L.push(`General: ${box(a.tipoCanal === 'canal')} Telegram channel ${box(a.tipoCanal === 'grupo')} Telegram group ☐ Discord ${box(a.tipoCanal === 'kol')} X (Twitter) ☐ YouTube ☐ TikTok ☐ Instagram ☐ Twitch ☐ Kick`);
+  L.push('South Korea: ☐ KakaoTalk open chat ☐ Naver Cafe ☐ Naver Band ☐ SOOP (AfreecaTV) ☐ Scam-verification sites ☐ Tipsters');
+  L.push('Russian-speaking: ☐ VK ☐ Odnoklassniki ☐ Russian-language forums ☐ Arbitrage traffic teams');
+  L.push('Southeast Asia: ☐ Facebook groups ☐ Line ☐ Zalo ☐ Viber');
+  L.push(`Latin America: ☐ WhatsApp groups ${box(a.tipoCanal === 'facebook')} Facebook`);
+  L.push('Chinese-speaking: ☐ WeChat groups ☐ Xiaohongshu (RedNote)');
+  L.push(`Non-public: ${box(a.dcPublico === false)} Individual agent (own clients, no public promotion) ☐ Migrating from another platform ☐ Offline / personal network`);
   L.push('');
   L.push('## 4. Channel Inventory (Complete)');
   L.push('| # | Channel name | Link | Followers / members | Type |');
@@ -249,13 +258,19 @@ function ddForm(a) {
   L.push(`Primary channels selected for deep dive: ${v(a.principales)}. Reason for selection: ${v(a.razonPrincipales)}`);
   L.push('');
   L.push('## 5. Primary Channel Deep Dive');
-  L.push(`Channel ①: ${v(a.dcNombre)} · Type: ${a.dcTipo === 'grupo' ? 'Group (no view counter)' : 'Channel (has view counter)'} · Publicly verifiable: ${a.dcPublico === false ? 'Private / invite-only' : 'Public'}`);
+  L.push('Complete this section separately for each primary channel. The first launch will use 1–2 channels; deep-dive 3 so we have options and a backup.');
+  L.push('**Channel ①**');
+  L.push('| Item | Entry |');
+  L.push(`| Channel name and link | ${v(a.dcNombre)} |`);
+  L.push(`| Type | ${box(a.dcTipo !== 'grupo')} Channel (has view counter) ${box(a.dcTipo === 'grupo')} Group (no view counter) ☐ Other social |`);
+  L.push(`| Publicly verifiable? | ${box(a.dcPublico !== false)} Public ${box(a.dcPublico === false)} Private / invite-only |`);
   if (a.dcTipo === 'grupo') {
     L.push('| Metric | Value | How obtained |');
     L.push(`| Members | ${v(a.dcSuscriptores)} | ${v(a.dcSuscriptoresComo)} |`);
     L.push(`| Unique speakers today | ${v(a.dcHablantes)} | ${v(a.dcHablantesComo)} |`);
     L.push(`| Daily active rate | ${a.dcSuscriptores && a.dcHablantes !== undefined ? `${Math.round((a.dcHablantes / a.dcSuscriptores) * 1000) / 10}%` : 'Not obtained'} | Calculated |`);
     L.push(`| Avg. messages per day | ${v(a.dcMensajesDia)} | ${v(a.dcMensajesComo)} |`);
+    L.push(`| Bot spam present? | ${box(a.dcBots)} Yes ${box(!a.dcBots)} No | Observation |`);
   } else {
     L.push('| Metric | Value | How obtained |');
     L.push(`| Subscribers (as displayed) | ${v(a.dcSuscriptores)} | ${v(a.dcSuscriptoresComo)} |`);
@@ -265,17 +280,25 @@ function ddForm(a) {
     L.push(`| Posting frequency (posts / week) | ${v(a.dcPostsSemana)} | ${v(a.dcPostsComo)} |`);
     L.push(`| 6-month growth curve | ${v(a.dcCrecimiento)} | TGStat / Telemetr / Telegram Statistics |`);
   }
-  L.push('Red Flag Check:');
+  L.push('Red Flag Check (tick each that applies; any ticked item must be explained in Section 7):');
   ['Growth curve shows a vertical spike followed by a drop', 'View rate below half the median for its size range', 'Reactions ÷ views below 0.3%', 'Channel has been renamed or switched content niche', 'Many members with blank avatars / no username', 'Private or invite-only; public data cannot be verified']
     .forEach((f) => L.push(`${box(flags.includes(f))} ${f}`));
+  L.push('Attachments (required): ☐ Screenshots of the last 10 posts (view counts visible) ☐ Screenshot of the last 24 h in private groups or channels ☐ TGStat or Telemetr 6-month growth curve');
+  L.push('For Channel ② and Channel ③, copy this section.');
   L.push('');
   L.push('## 6. User & Betting Profile');
   L.push('| Item | Sub-agent claims | Negotiator verified | Verification method |');
-  L.push(`| Age distribution | ${v(a.edadDice)} | ${v(a.edadVerif)} | ${v(a.edadMetodo)} |`);
+  L.push(`| Age distribution (under 30 / 30–40 / 40+) | ${v(a.edadDice)} | ${v(a.edadVerif)} | ${v(a.edadMetodo)} |`);
+  L.push(`| Main topics & daily chat content | ${v(a.temasDice)} | ${v(a.temasVerif)} | ${v(a.temasMetodo)} |`);
+  L.push(`| User profile | ${v(a.regionClientes)} | ${v(a.perfilVerif)} | ${v(a.perfilMetodo)} |`);
+  L.push(`| Betting preferences | ${v(a.prefDice)} | ${v(a.prefVerif)} | ${v(a.prefMetodo)} |`);
   L.push(`| Est. average bet size | ${v(a.apuestaDice)} | ${v(a.apuestaVerif)} | ${v(a.apuestaMetodo)} |`);
   L.push(`| Est. monthly active bettors | ${v(a.activosDice)} | ${v(a.activosVerif)} | ${v(a.activosMetodo)} |`);
   L.push(`| Where they currently bet | ${v(a.dondeDice)} | ${v(a.dondeVerif)} | ${v(a.dondeMetodo)} |`);
   L.push(`| Customers (total / known personally) | ${v(a.clientes)} / ${v(a.conocidos)} | | First call |`);
+  L.push('User Profile: ☐ Short-term trading ☐ Meme / low-cap degen tokens ☐ On-chain DeFi ☐ Spot holding ☐ Pure gambling ☐ Other: sports bettors');
+  const pref = C.normalizar(`${a.prefDice || ''} ${a.prefVerif || ''}`);
+  L.push(`Betting Preferences: ${box(/sport|deport|futbol|football/.test(pref))} Sports ${box(/esport/.test(pref))} Esports ${box(/baccarat/.test(pref))} Baccarat ${box(/slot/.test(pref))} Slots ${box(/lottery|loter/.test(pref))} Lottery ${box(/prediction|prediccion/.test(pref))} Prediction markets`);
   L.push('');
   L.push('## 7. Negotiator Assessment & Recommendation');
   L.push(`| Chosen path | ${MODELO_EN[a.modelo] || 'Not obtained'}. ${v(a.motivoCamino)} |`);
@@ -296,7 +319,8 @@ function ddForm(a) {
   L.push('| Approver / Date | |');
   L.push('This form is used together with the "Alice · BD Channel Incentive Policy". The contract is a separate approval.');
   L.push('');
-  L.push('## Answers from the KOL (first call)');
+  L.push('## Information we need from the KOL: questions sent and his answers');
+  L.push('Questions 1.1 to 5.6 of the template, each with "KOL: (n) answer word for word in Spanish" and "Update: ..." when it changes. Answers collected in the first call:');
   L.push(`- Customers' region: ${v(a.regionClientes)} · Language: ${v(a.idioma)}`);
   L.push(`- Customers: ${v(a.clientes)}, known personally: ${v(a.conocidos)}`);
   L.push(`- Other platform now: ${v(a.otraPlataforma)}`);
@@ -690,6 +714,7 @@ const PASOS = [
         { ...dato('dcHablantesComo', 'Como lo contaste:'), aplica: (a) => a.dcTipo === 'grupo' },
         { ...num('dcMensajesDia', 'Mensajes promedio por dia:'), aplica: (a) => a.dcTipo === 'grupo' },
         { ...dato('dcMensajesComo', 'Como lo contaste:'), aplica: (a) => a.dcTipo === 'grupo' },
+        { ...sino('dcBots', 'Hay spam de bots?'), aplica: (a) => a.dcTipo === 'grupo' },
         sino('dcPico', 'La curva muestra un pico vertical seguido de una caida?'),
         sino('dcReacciones', 'Las reacciones son menos del 0.3% de las vistas?'),
         sino('dcRenombrado', 'El canal cambio de nombre o de tema?'),
@@ -713,6 +738,14 @@ const PASOS = [
         dato('edadDice', 'Edad, lo que dice el agente (menos de 30 / 30-40 / 40+):'),
         dato('edadVerif', 'Edad, lo que verificaste:'),
         dato('edadMetodo', 'Edad, metodo de verificacion:'),
+        dato('temasDice', 'Temas y contenido diario, lo que dice el agente (deportes, ligas):'),
+        dato('temasVerif', 'Temas y contenido diario, lo que verificaste en sus posts:'),
+        dato('temasMetodo', 'Temas, metodo (posts revisados y fechas):'),
+        dato('perfilVerif', 'Perfil de usuarios (paises), lo que verificaste:'),
+        dato('perfilMetodo', 'Perfil de usuarios, metodo de verificacion:'),
+        dato('prefDice', 'Preferencias de apuesta, lo que dice el agente (deportes, esports, casino):'),
+        dato('prefVerif', 'Preferencias de apuesta, lo que verificaste:'),
+        dato('prefMetodo', 'Preferencias, metodo de verificacion:'),
         dato('apuestaDice', 'Apuesta promedio, lo que dice el agente (con moneda):', { rechazar: ['no se', 'no sabe', 'dont know', "don't know", 'no dijo'], motivoRechazo: '"No se" no se acepta para la apuesta promedio. Pregunta en la comunidad o cuenta los boletos publicados.' }),
         dato('apuestaVerif', 'Apuesta promedio, lo que verificaste:'),
         dato('apuestaMetodo', 'Apuesta promedio, metodo (si es solo su palabra escribe "Agent claim only" y el plan):'),

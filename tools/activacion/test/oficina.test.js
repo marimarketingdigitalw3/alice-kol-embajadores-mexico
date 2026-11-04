@@ -145,6 +145,7 @@ test('recorrido completo: llamada -> calificacion -> DD -> activacion -> contrat
   // Seccion 6: perfil de usuarios
   o.bt('c|h');
   o.tx('Menos de 30'); o.tx('Not obtained, sin encuesta; next step: encuesta de edad'); o.tx('Agent claim only');
+  ['Liga MX y Premier', 'Picks de Liga MX en sus posts', 'Posts del 1 al 5 nov', 'Mexico confirmado por moneda en boletos', 'Captura de un boleto en pesos', 'Deportes', 'Sin casino en sus posts', 'Revision de posts'].forEach((t) => o.tx(t));
   assert.match(o.todo(o.tx('no se')), /No se/);
   o.tx('200 soles (KOL claim)'); o.tx('Not obtained, sin boletos; next step: pedir boletos'); o.tx('Agent claim only, plan: encuesta');
   ['100 (KOL claim)', '137 suscriptores VIP por captura', 'Captura del canal VIP', 'Betano o Rushbet', 'Not obtained, sin chat; next step: encuesta', 'Agent claim only, plan: encuesta'].forEach((t) => o.tx(t));
@@ -158,7 +159,8 @@ test('recorrido completo: llamada -> calificacion -> DD -> activacion -> contrat
   // DD form generado con el formato de la plantilla
   o.bt('c|h');
   const dd = o.todo(o.tx('Canal publico con poco engagement; recomendamos prueba con link rastreado.'));
-  assert.match(dd, /Alice Sub-Agent \/ Channel Due Diligence Form · KOL Picks Pro MX/);
+  assert.match(dd, /Alice · Sub-Agent Channel Due Diligence Form - KOL - Picks Pro MX/);
+  assert.match(dd, /☒ Sports/);
   assert.match(dd, /## 1\. Source & Accountability/);
   assert.match(dd, /Score: 80 \/ 100, Tier A/);
   assert.match(dd, /View rate = avg\. views ÷ subscribers \| 6\.9%/);
