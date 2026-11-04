@@ -1,0 +1,11 @@
+# En Vercel solo se publica el bot: funciones, motor y una pagina vacia.
+/*
+!/api
+!/tools
+/tools/*
+!/tools/activacion
+/tools/activacion/test
+!/public
+!/package.json
+!/package-lock.json
+!/vercel.json
