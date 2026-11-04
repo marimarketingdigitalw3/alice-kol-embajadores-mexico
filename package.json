@@ -17,6 +17,7 @@
     "oficina:telegram": "node tools/activacion/telegram.js"
   },
   "dependencies": {
+    "@vercel/blob": "2.8.0",
     "puppeteer-core": "^25.5.0"
   }
 }
