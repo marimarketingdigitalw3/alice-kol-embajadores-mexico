@@ -9,7 +9,10 @@
   },
   "scripts": {
     "estado": "node tools/alice.js estado",
-    "cola": "node tools/alice.js cola"
+    "cola": "node tools/alice.js cola",
+    "activacion": "node tools/activacion/cli.js",
+    "activacion:telegram": "node tools/activacion/telegram.js",
+    "test": "node --test tools/activacion/test/motor.test.js"
   },
   "dependencies": {
     "puppeteer-core": "^25.5.0"

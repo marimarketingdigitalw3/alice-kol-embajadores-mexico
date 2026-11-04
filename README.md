@@ -26,6 +26,13 @@ uno.
 | Guard de contenido: chequeo mecanico antes de mandar | Un sistema de scoring automatico con IA: eso lo hace tu propio Claude Code, conversando con vos, antes de llegar al guard |
 | Driver de Instagram: el unico canal con envio automatizado | Driver de X, Telegram o correo: esos los operas vos a mano, con tus propias apps, marcando el toque aca despues |
 
+## Agente de activacion (despues de la firma)
+
+Para lo que viene DESPUES de que un agente firma (alta, M1 a M4, primer pago,
+subagentes) hay un agente guiado que no deja saltar pasos. Funciona en
+Telegram y en la terminal. Todo lo necesario esta en
+[`tools/activacion/README.md`](tools/activacion/README.md).
+
 ## Requisitos
 
 - [Node.js](https://nodejs.org) 18 o mas nuevo instalado en tu computadora.
