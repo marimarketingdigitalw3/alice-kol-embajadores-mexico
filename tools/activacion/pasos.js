@@ -40,6 +40,7 @@ function numero(v) {
 // ---------------------------------------------------------------------------
 
 const FASES = [
+  { id: 'C0', nombre: 'Segunda llamada y contrato', etapa: 'Contrato' },
   { id: 'C1', nombre: 'Dia de firma', etapa: 'M1 进行中' },
   { id: 'M1', nombre: 'M1 · Puede usarlo (primer login)', etapa: 'M1 进行中', plazo: 'firma + 24 h' },
   { id: 'C2', nombre: 'Materiales completos', etapa: 'M2 进行中' },
@@ -55,7 +56,52 @@ const FASES = [
 // Pasos
 // ---------------------------------------------------------------------------
 
+const desdeOficina = (a) => a.origen === 'oficina';
+
 const PASOS = [
+  // ============ C0 · SEGUNDA LLAMADA Y CONTRATO (llega desde Calificacion) ============
+  {
+    id: 'c0_segunda',
+    fase: 'C0',
+    aplica: desdeOficina,
+    titulo: 'Agendar la segunda llamada (camino, tasa y contrato)',
+    que: [
+      'Llega aqui porque Stella aprobo su due diligence form. La primera llamada ya se hizo.',
+      'Objetivo de la segunda llamada: confirmar el camino que eligio, cerrar tasa y revisar el contrato.',
+      'No ofrezcas tasas ni upfront fee antes de la llamada.',
+    ],
+    guiones: (a) => [
+      { tipo: 'ENVIAR', titulo: 'Proponer la segunda llamada', texto: `Hola ${a.nombre || '[Nombre]'}, gracias por la llamada del otro dia.\n\nYa revisamos todo de nuestro lado y queremos avanzar contigo. Te propongo una segunda llamada corta para dejar listo el camino con el que vas a empezar y revisar juntos el acuerdo.\n\nElige el horario que te quede mejor: https://unboundoperators.app/book/maria/alice-ai` },
+    ],
+    prueba: { tipo: 'captura', pide: 'Captura de la invitacion de calendario con la segunda llamada agendada.' },
+  },
+  {
+    id: 'c0_contrato',
+    fase: 'C0',
+    aplica: desdeOficina,
+    titulo: 'Negociar y firmar el contrato (aprobado por Stella)',
+    que: [
+      'Tasa sobre ingreso neto, no sobre volumen. Desde 15%, con tramos por ingreso neto de 90 dias. Subir de tramo requiere revision; aplica solo a periodos futuros.',
+      'Mas de 20%: puede pedirlo, pero da algo a cambio (volumen minimo, exclusividad en su region o condiciones de pago).',
+      'Upfront fee: NUNCA lo ofrezcas tu. Es un adelanto de comisiones futuras: se descuenta 50% de cada liquidacion hasta cubrirlo, maximo 6 meses. Para pedirlo: para que es, que entrega verificable y para cuando.',
+      'Pauta pura o minimo garantizado: no entra en estos terminos. Aprobacion aparte por escrito; nunca se responde de palabra en un grupo.',
+      'Usa la version aprobada del contrato (chino, ingles, o ingles con upfront fee). No armes una propia.',
+      'El due diligence form y el contrato son dos aprobaciones distintas de Stella: no se juntan ni se saltan.',
+    ],
+    checklist: [
+      'Explique: comision sobre ingreso neto',
+      'Explique: tasa inicial y tramos',
+      'Explique: liquidacion semanal con 3 dias para reclamar',
+      'Explique: lineas rojas (China continental, no negociable)',
+      'Stella aprobo el contrato',
+    ],
+    prueba: { tipo: 'captura', pide: 'Captura del contrato firmado por ambas partes.' },
+    alCompletar: (a, t) => {
+      a.firmado = t.toISOString();
+      return [{ texto: '🖊 Contrato firmado. Desde hoy corren los plazos: M1 en 24 h, M2 en 3 dias, M3 en 7 dias. El dia de firma se hace TODO hoy.' }];
+    },
+  },
+
   // ======================= C1 · DIA DE FIRMA =======================
   {
     id: 'c1_tracker',

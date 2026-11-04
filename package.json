@@ -12,7 +12,9 @@
     "cola": "node tools/alice.js cola",
     "activacion": "node tools/activacion/cli.js",
     "activacion:telegram": "node tools/activacion/telegram.js",
-    "test": "node --test tools/activacion/test/motor.test.js"
+    "test": "node --test tools/activacion/test/motor.test.js tools/activacion/test/oficina.test.js",
+    "oficina": "node tools/activacion/cli.js",
+    "oficina:telegram": "node tools/activacion/telegram.js"
   },
   "dependencies": {
     "puppeteer-core": "^25.5.0"

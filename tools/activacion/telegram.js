@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Canal Telegram del agente de activacion. Sin dependencias: usa fetch de
+ * Canal Telegram de la Oficina ALICE AI (Outreach, Calificacion, Activacion). Sin dependencias: usa fetch de
  * Node 18+ y long polling (no necesita servidor ni dominio).
  *
  *   TELEGRAM_BOT_TOKEN=123:abc ACTIVACION_PERMITIDOS=111,222 node tools/activacion/telegram.js
@@ -12,8 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { crearMotor } = require('./motor');
-const { storeArchivo } = require('./store');
+const { crearOficina } = require('./oficina');
 
 function cargarEnv() {
   const f = path.join(__dirname, '..', '..', '.env');
@@ -67,8 +66,7 @@ async function main() {
   if (!permitidos.length) {
     console.warn('AVISO: ACTIVACION_PERMITIDOS esta vacio. Cualquiera que encuentre el bot puede usarlo, y es material INTERNO. Agrega los IDs de Telegram del equipo BD.');
   }
-  const store = storeArchivo();
-  const motor = crearMotor({ store, permitidos });
+  const motor = crearOficina({ permitidos });
   const API = `https://api.telegram.org/bot${token}`;
 
   async function llamar(metodo, cuerpo) {
@@ -94,7 +92,9 @@ async function main() {
 
   await llamar('setMyCommands', {
     commands: [
-      ['paso', 'Paso actual con guiones'], ['nuevo', 'Registrar agente recien firmado'], ['agentes', 'Tus agentes'],
+      ['oficina', 'Menu de la oficina'], ['llamada', 'Primera llamada confirmada'], ['pipeline', 'Todo el embudo'],
+      ['outreach', 'Escritorio de Outreach'], ['calificacion', 'Escritorio de Calificacion'], ['activacion', 'Escritorio de Activacion'],
+      ['paso', 'Paso actual con guiones'], ['agentes', 'Tus expedientes'],
       ['estado', 'Hitos, plazos y blocker'], ['checklist', 'C1 a C8 con pruebas'], ['bloqueo', 'Donde se atoro'],
       ['escalar', 'Armar escalamiento'], ['faq', 'Preguntas del agente'], ['resumen', 'Version para el grupo'],
       ['nodecir', 'Lo que nunca se dice'], ['numeros', 'Cifras clave'], ['tbc', 'Pendientes de confirmar'],
@@ -105,12 +105,12 @@ async function main() {
   // Alertas de plazos y recordatorio diario del tracker.
   setInterval(async () => {
     for (const aviso of motor.revisarPlazos()) {
-      const u = motor._estado.usuarios[aviso.usuario];
-      if (u && u.chat) await enviar(u.chat, aviso.salidas);
+      const chat = motor.chatDe(aviso.usuario);
+      if (chat) await enviar(chat, aviso.salidas);
     }
   }, 15 * 60 * 1000);
 
-  console.log('Agente de activacion corriendo en Telegram. Ctrl+C para detener.');
+  console.log('Oficina ALICE AI corriendo en Telegram. Ctrl+C para detener.');
   let offset = 0;
   for (;;) {
     let updates = [];
@@ -129,7 +129,7 @@ async function main() {
           llamar('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
           const chat = q.message.chat.id;
           const salidas = motor.recibir({ usuario: { id: q.from.id, nombre: q.from.first_name }, boton: q.data });
-          recordarChat(motor, q.from.id, chat);
+          motor.registrarChat(q.from.id, chat);
           await enviar(chat, salidas);
         } else if (up.message) {
           const m = up.message;
@@ -138,7 +138,7 @@ async function main() {
           if (m.photo && m.photo.length) foto = { id: m.photo[m.photo.length - 1].file_id };
           else if (m.document && /^image\//.test(m.document.mime_type || '')) foto = { id: m.document.file_id };
           const salidas = motor.recibir({ usuario: { id: m.from.id, nombre: m.from.first_name }, texto: m.text || m.caption || '', foto });
-          recordarChat(motor, m.from.id, m.chat.id);
+          motor.registrarChat(m.from.id, m.chat.id);
           await enviar(m.chat.id, salidas);
         }
       } catch (e) {
@@ -148,10 +148,6 @@ async function main() {
   }
 }
 
-function recordarChat(motor, uid, chat) {
-  const u = motor._estado.usuarios[String(uid)];
-  if (u && u.chat !== chat) u.chat = chat;
-}
 
 if (require.main === module) main();
 

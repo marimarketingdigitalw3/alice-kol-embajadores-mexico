@@ -52,7 +52,27 @@ const CAMPOS_NUEVO = [
 
 const ICONO = { ENVIAR: '📤 ENVIAR', REENVIAR: '🔁 REENVIAR (para sus clientes)', INTERNO: '🔒 INTERNO (no reenviar)' };
 
-function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
+const FLUJO_ACTIVACION = {
+  id: 'activacion',
+  nombre: 'Activacion',
+  PASOS: P.PASOS,
+  FASES: P.FASES,
+  CAMPOS_NUEVO,
+  PLAZOS,
+  HITOS: ['M1', 'M2', 'M3', 'M4'],
+  BLOQUEOS: C.BLOQUEOS,
+  bloqueoDeFase: (f) => {
+    if (['C0', 'C1', 'M1', 'C2'].includes(f)) return 'M1';
+    if (['C3', 'M2', 'C7'].includes(f)) return 'M2';
+    if (f === 'M3') return 'M3';
+    return 'M4';
+  },
+};
+
+const SOLO_ACTIVACION = ['subagentes', 'semanal', 'reactivar', 'calc', 'resumen', 'exportar'];
+
+function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = FLUJO_ACTIVACION, alCerrar = null }) {
+  const F = flujo;
   const estado = store.leer();
   estado.usuarios = estado.usuarios || {};
   estado.agentes = estado.agentes || {};
@@ -72,39 +92,37 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
     return estado.usuarios[id];
   }
 
-  function pasosDe(a) { return P.PASOS.filter((p) => !p.aplica || p.aplica(a)); }
+  function pasosDe(a) { return F.PASOS.filter((p) => !p.aplica || p.aplica(a)); }
   function pasoActual(a) { return pasosDe(a).find((p) => !a.pasos[p.id]) || null; }
-  function fase(id) { return P.FASES.find((f) => f.id === id); }
+  function fase(id) { return F.FASES.find((f) => f.id === id); }
 
   function etapa(a) {
     if (a.estado === 'detenido') return '中止合作 (detenido)';
     const p = pasoActual(a);
-    if (!p) return '完成闭环 (ciclo cerrado)';
+    if (!p) return F.etiquetaCierre || '完成闭环 (ciclo cerrado)';
     if (a.hitos.M4) return '完成闭环 (ciclo cerrado)';
     return fase(p.fase).etapa;
   }
 
   function vencimiento(a, hito) {
-    return new Date(new Date(a.firmado).getTime() + PLAZOS[hito]);
+    if (!a.firmado || !F.PLAZOS[hito]) return null;
+    return new Date(new Date(a.firmado).getTime() + F.PLAZOS[hito]);
   }
 
   function lineaPlazos(a) {
     const t = ahora().getTime();
-    return ['M1', 'M2', 'M3', 'M4'].map((h) => {
+    if (!F.HITOS.length) return '';
+    if (!a.firmado) return `⏳ Los plazos de ${F.HITOS.join(', ')} arrancan el dia que se firma el contrato.`;
+    return F.HITOS.map((h) => {
       if (a.hitos[h]) return `✅ ${h} ${dia(a.hitos[h])}`;
-      if (!PLAZOS[h]) return `⬜ ${h} (primera liquidacion semanal)`;
+      if (!F.PLAZOS[h]) return `⬜ ${h} (primera liquidacion semanal)`;
       const v = vencimiento(a, h);
       const horas = Math.round((v.getTime() - t) / HORA);
       return horas < 0 ? `🔴 ${h} VENCIDO hace ${-horas} h` : `⬜ ${h} vence en ${horas} h (${fecha(v.toISOString())})`;
     }).join('\n');
   }
 
-  function bloqueosDeFase(f) {
-    if (['C1', 'M1', 'C2'].includes(f)) return 'M1';
-    if (['C3', 'M2', 'C7'].includes(f)) return 'M2';
-    if (f === 'M3') return 'M3';
-    return 'M4';
-  }
+  function bloqueosDeFase(f) { return F.bloqueoDeFase(f); }
 
   function guionesSalida(a, p) {
     const g = p.guiones ? p.guiones(a) : [];
@@ -150,6 +168,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
   }
 
   function mostrarCierre(a) {
+    if (F.cierre) return F.cierre(a).map((x) => msg(x.texto, x));
     return [msg(
       `M4 completo y subagentes tratados. Este agente esta en MANTENIMIENTO.\n\nCada semana:\n${P.MANTENIMIENTO_SEMANAL.map((x) => `• ${x}`).join('\n')}\n\nSi baja su volumen usa /reactivar para diagnosticar donde se detuvo.`,
       { titulo: `🏁 ${a.nombre} · ciclo cerrado`, botones: [[{ t: '📅 Semanal', d: 'sem' }, { t: '🩺 Reactivar', d: 'rx' }]] },
@@ -164,6 +183,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
       `Region: ${a.region || '-'} · Idioma: ${a.idioma || '-'}`,
       `Wallet: ${a.wallet || '-'}`,
       `Tasa: ${a.tasa ? `${a.tasa}%` : '-'} · Upline: ${a.upline || '-'}`,
+      ...(a.score !== undefined ? [`Score: ${a.score} / 100 · Tier ${a.tier}`] : []),
       `Firmado: ${dia(a.firmado)} · BD: ${a.bd}`,
       `Stage: ${etapa(a)}`,
       `Paso actual: ${p ? p.titulo : 'ninguno'}`,
@@ -177,9 +197,9 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
 
   function checklistCompleto(a) {
     const lineas = [];
-    for (const f of P.FASES) {
+    for (const f of F.FASES) {
       lineas.push('', `${f.id} · ${f.nombre}`);
-      for (const p of P.PASOS.filter((x) => x.fase === f.id)) {
+      for (const p of F.PASOS.filter((x) => x.fase === f.id)) {
         if (p.aplica && !p.aplica(a)) { lineas.push(`➖ ${p.titulo} (no aplica a este modelo)`); continue; }
         const h = a.pasos[p.id];
         lineas.push(h ? `✅ ${p.titulo} · ${fecha(h.hecho)} · prueba: ${h.prueba.resumen}` : `⬜ ${p.titulo}`);
@@ -251,9 +271,9 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
   }
 
   function camposDe(e) {
-    if (e.origen === 'nuevo') return CAMPOS_NUEVO;
+    if (e.origen === 'nuevo') return F.CAMPOS_NUEVO;
     if (e.origen === 'escalar') return CAMPOS_ESCALAR;
-    return P.PASOS.find((p) => p.id === e.pasoId).prueba.campos;
+    return F.PASOS.find((p) => p.id === e.pasoId).prueba.campos;
   }
 
   function responderFormulario(u, entrada) {
@@ -292,7 +312,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
     if (e.origen === 'nuevo') return crearAgente(u, e.datos);
     if (e.origen === 'escalar') return armarEscalamiento(u, e.datos);
     const a = agenteActivo(u);
-    const p = P.PASOS.find((x) => x.id === e.pasoId);
+    const p = F.PASOS.find((x) => x.id === e.pasoId);
     const datos = { ...e.datos };
     const foto = datos.capturaEnvio;
     delete datos.capturaEnvio;
@@ -344,9 +364,13 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
     a.bloqueo = '';
     const out = [];
     if (p.id === 'm3_link' && prueba.resumen.startsWith('http')) a.linkReferido = prueba.resumen;
+    if (p.alCompletar) {
+      const extra = p.alCompletar(a, t);
+      if (extra) out.push(...extra.map((x) => msg(x.texto, x)));
+    }
     if (p.hito) {
       a.hitos[p.hito] = t.toISOString();
-      const v = PLAZOS[p.hito] ? vencimiento(a, p.hito) : null;
+      const v = vencimiento(a, p.hito);
       const tarde = v && t > v ? ` (fuera de plazo por ${Math.round((t - v) / HORA)} h)` : ' (en plazo)';
       out.push(msg(`🎯 ${p.hito} COMPLETO${v ? tarde : ''}. Anota la fecha en el tracker: ${p.hito} Done = ${dia(t.toISOString())}.`));
       if (p.hito === 'M4') out.push(msg('💰 Ciclo cerrado: cambia Stage a 完成闭环 en el tracker. Tienes 24 h para hablar de subagentes.'));
@@ -357,6 +381,12 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
     }
     guardar();
     out.unshift(msg(`✅ Paso completado: ${p.titulo}`));
+    if (!pasoActual(a) && alCerrar && !a.cerradoEn) {
+      a.cerradoEn = t.toISOString();
+      guardar();
+      out.push(...alCerrar(a, u));
+      return out;
+    }
     out.push(...mostrarPaso(a));
     return out;
   }
@@ -407,7 +437,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
   function vistaBloqueos(a, arg) {
     const p = pasoActual(a);
     const key = bloqueosDeFase(p ? p.fase : 'M4');
-    const lista = C.BLOQUEOS[key];
+    const lista = F.BLOQUEOS[key] || [];
     if (arg === undefined) {
       return [msg(`Bloqueos tipicos de ${key}. Elige el que aplica y lo registro como Blocker del dia.\nSi es otro, escribe /bloqueo y el texto.`, { titulo: '🚧 Donde se atoro?', botones: [...lista.map((x, i) => [{ t: x[0], d: `b:${i}` }]), [{ t: '🆘 Escalar', d: 'esc' }]] })];
     }
@@ -498,12 +528,18 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
   }
 
   function comando(u, uid, nombre, arg) {
+    if (F.id !== 'activacion' && SOLO_ACTIVACION.includes(nombre)) {
+      return [msg(`Ese comando es del escritorio de Activacion. Estas en ${F.nombre}.`)];
+    }
+    if (nombre === 'ayuda' || nombre === 'start' || nombre === 'help') {
+      if (F.ayuda) return [msg(F.ayuda, { titulo: `🤖 Escritorio de ${F.nombre}` })];
+    }
     switch (nombre) {
       case 'start': case 'ayuda': case 'help': return ayuda();
       case 'nuevo':
         u.esperando = { tipo: 'form', origen: 'nuevo', i: 0, datos: {} };
         guardar();
-        return [msg('Vamos a registrar una firma. Todo lo de hoy se hace HOY: fila en el tracker y alta enviada a CS.', { titulo: '🆕 Nuevo agente' }), ...preguntar(u, {}, CAMPOS_NUEVO)];
+        return [msg(F.textoNuevo || 'Vamos a registrar una firma. Todo lo de hoy se hace HOY: fila en el tracker y alta enviada a CS.', { titulo: '🆕 Nuevo' }), ...preguntar(u, {}, F.CAMPOS_NUEVO)];
       case 'agentes': return vistaAgentes(u);
       case 'usar': {
         const a = estado.agentes[arg];
@@ -666,9 +702,10 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
     for (const a of Object.values(estado.agentes)) {
       if (a.estado !== 'activo') continue;
       const out = [];
-      for (const h of ['M1', 'M2', 'M3']) {
+      for (const h of Object.keys(F.PLAZOS)) {
         if (a.hitos[h] || a.alertas[h]) continue;
-        if (t > vencimiento(a, h)) {
+        const venc = vencimiento(a, h);
+        if (venc && t > venc) {
           a.alertas[h] = t.toISOString();
           out.push(msg(`🔴 ${a.nombre}: ${h} VENCIDO. Plazo era ${fecha(vencimiento(a, h).toISOString())}.\nRevisa donde se atoro (/agentes -> #${a.id} -> /bloqueo) y registra la siguiente accion.`));
         }
@@ -690,7 +727,29 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date() }) {
     return avisos;
   }
 
-  return { recibir, revisarPlazos, _estado: estado };
+  /** Crea un expediente directo, sin formulario (lo usa la oficina en los traspasos). */
+  function importar(usuarioEntrada, datos) {
+    const u = usuario(usuarioEntrada);
+    estado.seq += 1;
+    const id = String(estado.seq);
+    const a = {
+      id, ...datos, origen: 'oficina', bd: u.nombre || 'BD', bdId: u.id,
+      estado: 'activo', pasos: {}, checks: {}, hitos: {}, alertas: {}, liquidaciones: [], historial: [],
+      bloqueo: '', accion: '', creado: ahora().toISOString(),
+    };
+    estado.agentes[id] = a;
+    u.activo = id;
+    guardar();
+    return a;
+  }
+
+  function verPaso(uEntrada) {
+    const u = usuario(uEntrada);
+    const a = agenteActivo(u);
+    return a ? mostrarPaso(a) : [msg(`No hay expediente activo en ${F.nombre}.`)];
+  }
+
+  return { recibir, revisarPlazos, importar, verPaso, etapa, pasoActual, flujo: F, _estado: estado };
 }
 
-module.exports = { crearMotor, PLAZOS };
+module.exports = { crearMotor, PLAZOS, FLUJO_ACTIVACION, HORA };

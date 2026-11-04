@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * Canal de terminal del agente de activacion. Mismo motor, mismas reglas y
+ * Canal de terminal de la Oficina ALICE AI. Mismo motor, mismas reglas y
  * mismos candados que en Telegram, sin necesitar un bot.
  *
  *   node tools/activacion/cli.js
@@ -13,8 +13,7 @@
 
 const fs = require('fs');
 const readline = require('readline');
-const { crearMotor } = require('./motor');
-const { storeArchivo } = require('./store');
+const { crearOficina } = require('./oficina');
 
 const USUARIO = { id: process.env.ACTIVACION_USUARIO || 'local', nombre: process.env.ACTIVACION_NOMBRE || process.env.USER || 'BD' };
 
@@ -36,7 +35,7 @@ function renderTexto(s, botones) {
 }
 
 function main() {
-  const motor = crearMotor({ store: storeArchivo() });
+  const motor = crearOficina({ dir: process.env.OFICINA_STATE_DIR || undefined });
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: '\n> ' });
   let botones = [];
 
@@ -47,7 +46,7 @@ function main() {
 
   const avisos = motor.revisarPlazos().filter((a) => String(a.usuario) === String(USUARIO.id));
   avisos.forEach((a) => mostrar(a.salidas));
-  mostrar(motor.recibir({ usuario: USUARIO, texto: '/ayuda' }));
+  mostrar(motor.recibir({ usuario: USUARIO, texto: '/oficina' }));
   rl.prompt();
 
   rl.on('line', (linea) => {
