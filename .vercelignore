@@ -4,6 +4,8 @@
 !/tools
 /tools/*
 !/tools/activacion
+!/tools/outreach
+/tools/outreach/test
 /tools/activacion/test
 !/public
 !/package.json
