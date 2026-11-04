@@ -177,6 +177,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     };
     botones.push([{ t: ETIQUETA_HECHO[p.prueba.tipo] || '✅ Marcar hecho', d: 'h' }]);
     botones.push([...(p.guiones ? [{ t: '📤 Guiones', d: 'g' }] : []), { t: '🚧 Bloqueos', d: 'b' }, { t: '❓ FAQ', d: 'f' }]);
+    botones.push([{ t: '📥 Traer datos de Notion', d: 'notion' }]);
 
     const out = [msg(lineas.join('\n'), { titulo: `${a.nombre} · ${p.titulo}`, botones })];
     if (conGuiones) out.push(...guionesSalida(a, p));
@@ -193,22 +194,27 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
 
   function estadoAgente(a) {
     const p = pasoActual(a);
-    return [msg([
-      `Canal: ${a.nombre} (#${a.id})`,
-      `Tipo: ${C.TIPOS_CANAL[a.tipoCanal] || '-'} · Modelo: ${C.MODELOS[a.modelo] || '-'}`,
-      `Region: ${a.region || '-'} · Idioma: ${a.idioma || '-'}`,
-      `Wallet: ${a.wallet || '-'}`,
-      `Tasa: ${a.tasa ? `${a.tasa}%` : '-'} · Upline: ${a.upline || '-'}`,
-      ...(a.score !== undefined ? [`Score: ${a.score} / 100 · Tier ${a.tier}`] : []),
-      `Firmado: ${dia(a.firmado)} · BD: ${a.bd}`,
-      `Stage: ${etapa(a)}`,
-      `Paso actual: ${p ? p.titulo : 'ninguno'}`,
-      '',
-      lineaPlazos(a),
-      '',
-      `Blocker: ${a.bloqueo || '-'}`,
-      `Next Action: ${a.accion || '-'}`,
-    ].join('\n'), { titulo: '📋 Estado' })];
+    const n = a.notion || {};
+    const sinChino = (t) => (t ? t.replace(/\s*\([^)]*[\u3400-\u9fff][^)]*\)/g, '') : t);
+    const v = (k) => a[k] || n[k] || '';
+    const lineas = [`Canal: ${a.nombre} (#${a.id})`];
+    lineas.push(`Tipo: ${sinChino(C.TIPOS_CANAL[v('tipoCanal')]) || '-'} · Modelo: ${sinChino(C.MODELOS[v('modelo')]) || '-'}`);
+    if (F.HITOS && F.HITOS.length) {
+      lineas.push(`Region: ${v('region') || '-'} · Idioma: ${v('idioma') || '-'}`);
+      lineas.push(`Wallet: ${v('wallet') || '-'}`);
+      lineas.push(`Tasa: ${v('tasa') ? `${v('tasa')}%` : '-'} · Upline: ${v('upline') || '-'}`);
+    } else {
+      lineas.push(`Region de clientes: ${v('regionClientes') || '-'}`);
+      lineas.push(`Fuente: ${v('fuente') || '-'} · Negociador: ${v('negociador') || '-'}`);
+    }
+    if (a.score !== undefined) lineas.push(`Score: ${a.score} / 100 · Tier ${a.tier}`);
+    lineas.push(`${F.HITOS && F.HITOS.length ? `Firmado: ${dia(a.firmado) || '-'} · ` : ''}BD: ${a.bd}`);
+    lineas.push(`Stage: ${etapa(a)}`, `Paso actual: ${p ? p.titulo : 'ninguno'}`);
+    const plazos = lineaPlazos(a);
+    if (plazos && plazos.trim()) lineas.push('', plazos);
+    lineas.push('', `Blocker: ${a.bloqueo || '-'}`, `Next Action: ${a.accion || '-'}`);
+    if (a.notionInfo) lineas.push('', `📥 Notion: ${a.notionInfo}`);
+    return [msg(lineas.join('\n'), { titulo: '📋 Estado', botones: [[{ t: '📥 Traer datos de Notion', d: 'notion' }]] })];
   }
 
   function checklistCompleto(a) {
@@ -281,8 +287,19 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       }
     }
     const botones = (c.opciones || []).map(([v, t]) => [{ t, d: `o:${v}` }]);
+    let pregunta = c.pregunta;
+    const sugerido = a.notion && a.notion[c.clave];
+    if (sugerido && c.tipo !== 'foto') {
+      if (c.opciones) {
+        const op = c.opciones.find(([v]) => v === sugerido);
+        if (op) { pregunta += `\n\n📥 En Notion: ${op[1]}`; botones.unshift([{ t: `📥 Usar el de Notion: ${op[1]}`.slice(0, 60), d: `o:${op[0]}` }]); }
+      } else {
+        pregunta += `\n\n📥 En Notion: «${String(sugerido).slice(0, 600)}»\nÚsalo si sigue siendo cierto, o escribe la respuesta correcta.`;
+        botones.unshift([{ t: '📥 Usar el de Notion', d: 'nt' }]);
+      }
+    }
     botones.push([{ t: '✖ Cancelar', d: 'x' }]);
-    out.push(msg(c.pregunta, { titulo: `📝 ${e.i + 1}/${campos.length}`, botones }));
+    out.push(msg(pregunta, { titulo: `📝 ${e.i + 1}/${campos.length}`, botones }));
     return out;
   }
 
@@ -635,6 +652,14 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       if (!u.esperando || u.esperando.tipo !== 'form') return [msg('Ese formulario ya no esta activo.')];
       return responderFormulario(u, { opcion: d.slice(2) });
     }
+    if (d === 'nt') {
+      if (!u.esperando || u.esperando.tipo !== 'form') return [msg('Ese formulario ya no esta activo.')];
+      const a = agenteActivo(u) || {};
+      const c = camposDe(u.esperando)[u.esperando.i];
+      const v = c && a.notion && a.notion[c.clave];
+      if (!v) return [msg('No hay dato de Notion para esta pregunta: escribe la respuesta.')];
+      return responderFormulario(u, { texto: String(v) });
+    }
     if (d.startsWith('a:')) return comando(u, uid, 'usar', d.slice(2));
     if (d === 'f') return vistaFaq();
     if (d === 'fb') return vistaLista('Preguntas de BDs en el entrenamiento', C.FAQ_BD);
@@ -648,6 +673,8 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     if (d === 'rx') return vistaReactivar(a);
     if (d.startsWith('rx:')) return vistaReactivar(a, d.slice(3));
     if (d === 'g') return comando(u, uid, 'guiones');
+    if (d === 'p') return comando(u, uid, 'paso');
+    if (d === 'notion') return [msg('Buscando en Notion... (si no responde, usa /notion)')];
     if (d === 'b') return vistaBloqueos(a);
     if (d.startsWith('b:')) return vistaBloqueos(a, d.slice(2));
 
@@ -766,7 +793,40 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     return a ? mostrarPaso(a) : [msg(`No hay expediente activo en ${F.nombre}.`)];
   }
 
-  return { recibir, revisarPlazos, importar, verPaso, etapa, pasoActual, flujo: F, _estado: estado };
+  /** Expediente activo del usuario (para que la capa async sepa a quien buscar en Notion). */
+  function activoDe(uEntrada) {
+    const u = usuario(uEntrada);
+    return agenteActivo(u) || null;
+  }
+
+  /**
+   * Guarda lo que trajo Notion en el expediente activo. No marca pasos ni salta nada: cada dato
+   * queda como respuesta sugerida en su pregunta y pasa por la misma validacion.
+   */
+  function aplicarNotion(uEntrada, r) {
+    const u = usuario(uEntrada);
+    const a = agenteActivo(u);
+    if (!a) return [msg(`No hay expediente activo en ${F.nombre}. Elige uno con /agentes.`)];
+    const campos = r.campos || {};
+    const n = Object.keys(campos).length;
+    if (!r.dd && !r.tracker) {
+      return [msg(`No encontre en Notion un "Due Diligence Form - KOL - ${a.nombre}" ni una fila de ${a.nombre} en el tracker. Revisa que el nombre del expediente sea igual al de Notion y que la pagina este compartida con la integracion del bot.`, { titulo: '📥 Notion' })];
+    }
+    a.notion = { ...(a.notion || {}), ...campos };
+    a.notionInfo = [r.dd ? 'DD encontrado' : 'sin DD', r.tracker ? 'fila del tracker encontrada' : 'sin fila en el tracker', `${n} datos`].join(' · ');
+    a.historial.push({ at: ahora().toISOString(), evento: 'notion', detalle: a.notionInfo });
+    guardar();
+    const lista = Object.entries(campos).slice(0, 25).map(([k, v]) => `• ${k}: ${String(v).slice(0, 80)}`).join('\n');
+    return [msg([
+      r.dd ? `DD: ${r.dd.titulo}` : 'DD: no encontrado',
+      r.tracker ? 'Tracker: fila encontrada' : 'Tracker: sin fila',
+      '',
+      n ? `Traje ${n} datos. En cada pregunta te los ofrezco con el boton "📥 Usar el de Notion"; los confirmas o los corriges. Ningun paso se marca solo.` : 'La pagina existe pero no encontre datos llenos en la plantilla.',
+      n ? `\n${lista}` : '',
+    ].join('\n'), { titulo: `📥 Notion · ${a.nombre}`, botones: [[{ t: '▶ Seguir con el paso', d: 'p' }]] })];
+  }
+
+  return { recibir, revisarPlazos, importar, verPaso, etapa, pasoActual, activoDe, aplicarNotion, flujo: F, _estado: estado };
 }
 
 module.exports = { crearMotor, PLAZOS, FLUJO_ACTIVACION, HORA };

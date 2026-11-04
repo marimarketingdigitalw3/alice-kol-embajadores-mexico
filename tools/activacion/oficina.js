@@ -69,6 +69,7 @@ function crearOficina({ dir = STATE_DIR, permitidos = [], ahora = () => new Date
         score: exp.score,
         tier: exp.tier,
         firmado: null,
+        notion: exp.notion,
       });
       exp.activacionId = nuevo.id;
       oficinaUsuario(u.id).escritorio = 'a';
@@ -224,7 +225,29 @@ function crearOficina({ dir = STATE_DIR, permitidos = [], ahora = () => new Date
   }
   const chatDe = (uid) => oficinaUsuario(uid).chat;
 
-  return { recibir, revisarPlazos, registrarChat, chatDe, motores: MOTORES, _estado: estado };
+  /**
+   * Si la entrada pide traer datos de Notion ("📥 Traer datos de Notion" o /notion), devuelve a
+   * quien buscar: escritorio y expediente activo. La busqueda es asincrona y la hace el canal.
+   */
+  function pedidoNotion(entrada) {
+    const uid = String(entrada.usuario.id);
+    if (permitidos.length && !permitidos.map(String).includes(uid)) return null;
+    let k = oficinaUsuario(uid).escritorio;
+    if (entrada.boton) {
+      const [pref, d] = entrada.boton.split('|');
+      if (d !== 'notion' || !MOTORES[pref]) return null;
+      k = pref;
+    } else if (!/^\/notion\b/i.test((entrada.texto || '').trim())) return null;
+    if (!MOTORES[k]) return { k, sinExpediente: true };
+    const a = MOTORES[k].activoDe({ id: uid, nombre: entrada.usuario.nombre });
+    return a ? { k, nombre: a.nombre } : { k, sinExpediente: true };
+  }
+
+  function aplicarNotion(entrada, k, datos) {
+    return envolver(k, MOTORES[k].aplicarNotion({ id: entrada.usuario.id, nombre: entrada.usuario.nombre }, datos));
+  }
+
+  return { recibir, revisarPlazos, registrarChat, chatDe, pedidoNotion, aplicarNotion, motores: MOTORES, _estado: estado };
 }
 
 module.exports = { crearOficina, ESCRITORIOS, TAREAS, POR_ID };

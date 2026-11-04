@@ -58,7 +58,7 @@ function renderTelegram(s) {
 const COMANDOS = [
   ['oficina', 'Menu de la oficina'], ['llamada', 'Primera llamada confirmada'], ['pipeline', 'Todo el embudo'],
   ['outreach', 'Escritorio de Outreach'], ['calificacion', 'Escritorio de Calificacion'], ['activacion', 'Escritorio de Activacion'],
-  ['paso', 'Paso actual con guiones'], ['agentes', 'Tus expedientes'], ['nuevo', 'Registrar agente recien firmado'],
+  ['paso', 'Paso actual con guiones'], ['agentes', 'Tus expedientes'], ['notion', 'Traer datos del KOL desde Notion'], ['nuevo', 'Registrar agente recien firmado'],
   ['estado', 'Hitos, plazos y blocker'], ['checklist', 'C1 a C8 con pruebas'], ['bloqueo', 'Donde se atoro'],
   ['escalar', 'Armar escalamiento'], ['faq', 'Preguntas del agente'], ['resumen', 'Version para el grupo'],
   ['nodecir', 'Lo que nunca se dice'], ['numeros', 'Cifras clave'], ['tbc', 'Pendientes de confirmar'],
@@ -90,13 +90,26 @@ function crearApi(token) {
   return { llamar, enviar };
 }
 
+/** Respuesta de la oficina, con la busqueda en Notion cuando se pide (es lo unico asincrono). */
+async function responder(oficina, entrada, notion) {
+  const pedido = oficina.pedidoNotion && oficina.pedidoNotion(entrada);
+  if (!pedido) return oficina.recibir(entrada);
+  if (pedido.sinExpediente) return [{ texto: 'Primero abre o elige un expediente (/agentes) y despues trae sus datos de Notion.' }];
+  if (!notion) return [{ texto: 'Notion todavia no esta conectado al bot (falta NOTION_TOKEN).' }];
+  try {
+    return oficina.aplicarNotion(entrada, pedido.k, await notion.datosKOL(pedido.nombre));
+  } catch (e) {
+    return [{ titulo: '📥 Notion', texto: `No pude leer Notion: ${e.message}` }];
+  }
+}
+
 /** Procesa un update de Telegram (polling o webhook) contra la oficina. */
-async function procesarUpdate(oficina, up, { llamar, enviar }) {
+async function procesarUpdate(oficina, up, { llamar, enviar }, notion = null) {
   if (up.callback_query) {
     const q = up.callback_query;
     llamar('answerCallbackQuery', { callback_query_id: q.id }).catch(() => {});
     const chat = q.message.chat.id;
-    const salidas = oficina.recibir({ usuario: { id: q.from.id, nombre: q.from.first_name }, boton: q.data });
+    const salidas = await responder(oficina, { usuario: { id: q.from.id, nombre: q.from.first_name }, boton: q.data }, notion);
     oficina.registrarChat(q.from.id, chat);
     await enviar(chat, salidas);
   } else if (up.message) {
@@ -105,7 +118,7 @@ async function procesarUpdate(oficina, up, { llamar, enviar }) {
     let foto = null;
     if (m.photo && m.photo.length) foto = { id: m.photo[m.photo.length - 1].file_id };
     else if (m.document && /^image\//.test(m.document.mime_type || '')) foto = { id: m.document.file_id };
-    const salidas = oficina.recibir({ usuario: { id: m.from.id, nombre: m.from.first_name }, texto: m.text || m.caption || '', foto });
+    const salidas = await responder(oficina, { usuario: { id: m.from.id, nombre: m.from.first_name }, texto: m.text || m.caption || '', foto }, notion);
     oficina.registrarChat(m.from.id, m.chat.id);
     await enviar(m.chat.id, salidas);
   }
@@ -134,6 +147,7 @@ async function main() {
   }
   const oficina = crearOficina({ permitidos });
   const api = crearApi(token);
+  const notion = process.env.NOTION_TOKEN ? require('./notion').crearNotion() : null;
 
   // En modo polling no puede haber webhook activo.
   await api.llamar('deleteWebhook', {}).catch((e) => console.error(e.message));
@@ -156,7 +170,7 @@ async function main() {
     for (const up of updates) {
       offset = up.update_id + 1;
       try {
-        await procesarUpdate(oficina, up, api);
+        await procesarUpdate(oficina, up, api, notion);
       } catch (e) {
         console.error('Error procesando update:', e);
       }
