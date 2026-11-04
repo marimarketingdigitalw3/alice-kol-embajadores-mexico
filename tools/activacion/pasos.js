@@ -106,33 +106,27 @@ const PASOS = [
   {
     id: 'c1_tracker',
     fase: 'C1',
-    titulo: 'Crear la fila del agente en el tracker de Notion',
+    titulo: 'Crear su registro en el tracker de Notion (Activation Tracker)',
     que: [
-      `Abre "${C.LINKS.tracker}". Una fila por canal, creada HOY.`,
+      `Abre "${C.LINKS.tracker}" (seccion 14). Una fila por canal, creada HOY, el mismo dia de la firma.`,
       'Llena: Channel, Region, Channel Type, Model, Signed On, Owner y Stage = M1 进行中.',
-      'Este tracker se actualiza todos los dias habiles. Es parte de la condicion de salida.',
+      'Se actualiza todos los dias habiles. Solo cuenta lo verificable en el sistema (login, ticket liquidado, ticket liquidado de un cliente atribuido, retiro on-chain). "Me dijo que lo hizo" no cuenta.',
     ],
     prueba: { tipo: 'captura_o_texto', pide: 'Manda el link de la fila o una captura de la fila creada.' },
   },
   {
     id: 'c1_datos',
     fase: 'C1',
-    titulo: 'Recolectar los 4 datos de alta (en UN solo mensaje)',
+    titulo: 'Pedirle los 4 datos de onboarding en un solo mensaje',
     que: [
-      'Faltando uno solo, la cuenta no se puede abrir. No los pidas en tres mensajes.',
-      'La wallet EVM es la MISMA con la que va a entrar. Nunca una direccion de deposito de exchange.',
-      'La tasa debe estar YA aprobada por Stella. 20% o mas necesita algo a cambio.',
-      'Manda primero el guion, espera su respuesta y luego captura los datos aqui.',
+      'Envia el Mensaje 1 y, justo despues, el Mensaje 2.',
+      'Los 4 datos: wallet EVM (empieza por 0x), nickname, upline (si no tiene, "platform") y rate (la que Stella ya aprobo).',
+      'La wallet debe ser una que el pueda abrir y firmar, nunca una direccion de deposito de un exchange. Se recomienda OKX o Binance Wallet.',
+      'Si falta uno solo, la cuenta no se puede abrir. Cuando te responda, captura aqui los datos.',
     ],
     guiones: () => [
-      {
-        tipo: 'ENVIAR', titulo: 'Pedir los 4 datos',
-        texto: 'Firmado 🎉 Para abrir tu cuenta necesito 4 cosas, todas juntas:\n\n1. Direccion de wallet EVM: es la wallet con la que vas a entrar, asi que debe ser una que puedas abrir y firmar tu (OKX o Binance Wallet es lo mejor)\n2. Apodo\n3. Upline (si no tienes, escribe "plataforma")\n4. Tasa (la que acordamos)\n\nCon las 4 lo envio de inmediato. Si falta una, la cuenta no se puede abrir.',
-      },
-      {
-        tipo: 'ENVIAR', titulo: 'Plantilla que el agente puede llenar',
-        texto: '[Solicitud de alta de agente Kixly]\nApodo:\nWallet EVM (empieza con 0x, una con la que puedas firmar):\nAgente upline:\nTasa de revenue share:\nModelo (link de referido / sistema de agentes / ambos):\nRegion principal de clientes:',
-      },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 1 · Bienvenida y los 4 datos', texto: '¡Firmado! 🎉 Bienvenido a Kixly.\nPara abrir tu cuenta necesito 4 datos, todos en un solo mensaje:\n1. Dirección de wallet EVM (empieza por 0x)\n2. Nickname\n3. Upline (si no tienes, escribe "platform")\n4. Rate (la que acordamos)' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 2 · Sobre la wallet (justo después del 1)', texto: 'Importante sobre la wallet: es la que usarás para entrar.\nTiene que ser una que puedas abrir y firmar tú mismo. Lo mejor es OKX Wallet o Binance Wallet.\nNo uses una dirección de depósito de un exchange.\n¿Puedes abrir esa wallet y firmar con ella?\nCuando tenga los 4 datos, los envío de inmediato.' },
     ],
     prueba: {
       tipo: 'formulario',
@@ -145,34 +139,34 @@ const PASOS = [
             ? { ok: true, valor: String(v).trim() }
             : { ok: false, error: 'No es una wallet EVM valida: debe ser 0x seguido de 40 caracteres hexadecimales. Pidesela de nuevo al agente.' }),
         },
-        { clave: 'nickname', pregunta: 'Apodo (nickname):', validar: (v) => (String(v).trim().length >= 2 ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Apodo demasiado corto.' }) },
-        { clave: 'upline', pregunta: 'Upline (escribe "plataforma" si no tiene):', validar: (v) => (String(v).trim() ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Escribe el upline o "plataforma".' }) },
+        { clave: 'nickname', pregunta: 'Nickname:', validar: (v) => (String(v).trim().length >= 2 ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Nickname demasiado corto.' }) },
+        { clave: 'upline', pregunta: 'Upline (escribe "platform" si no tiene):', validar: (v) => (String(v).trim() ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Escribe el upline o "platform".' }) },
         {
           clave: 'tasa',
-          pregunta: 'Tasa acordada (%):',
+          pregunta: 'Rate acordada (%):',
           validar: (v) => {
             const n = numero(v);
             if (n === null || n <= 0 || n > 100) return { ok: false, error: 'Escribe solo el numero, por ejemplo 15.' };
-            if (n < 15) return { ok: false, error: 'La tasa inicial parte de 15%. Revisa con Stella antes de seguir.' };
+            if (n < 15) return { ok: false, error: 'La rate inicial parte de 15%. Revisa con Stella antes de seguir.' };
             return { ok: true, valor: n };
           },
         },
         {
           clave: 'tasaAprobada',
-          pregunta: 'Stella ya aprobo esta tasa? (si / no)',
+          pregunta: 'Stella ya aprobo esta rate? (si / no)',
           opciones: [['si', 'Si, aprobada'], ['no', 'Todavia no']],
           validar: (v) => {
             const b = si(v);
             if (b === true) return { ok: true, valor: true };
-            if (b === false) return { ok: false, bloquear: true, error: '🔒 Candado: toda tasa la aprueba Stella ANTES de pedir el alta. Consigue la aprobacion y vuelve a este paso.' };
+            if (b === false) return { ok: false, bloquear: true, error: '🔒 Candado: toda rate la aprueba Stella ANTES de pedir el alta. Consigue la aprobacion y vuelve a este paso.' };
             return { ok: false, error: 'Responde si o no.' };
           },
         },
         {
           clave: 'contrapartida',
-          pregunta: 'La tasa es 20% o mas. Que da el agente a cambio? (compromiso de volumen, exclusividad, condiciones de pago)',
+          pregunta: 'La rate es 20% o mas. Que da el agente a cambio? (compromiso de volumen, exclusividad, condiciones de pago)',
           aplica: (a) => Number(a.tasa) >= 20,
-          validar: (v) => (String(v).trim().length >= 5 ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Una tasa de 20% o mas necesita contrapartida. Describela.' }),
+          validar: (v) => (String(v).trim().length >= 5 ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Una rate de 20% o mas necesita contrapartida. Describela.' }),
         },
         {
           clave: 'region',
@@ -180,8 +174,8 @@ const PASOS = [
           validar: (v) => {
             const rev = C.revisarRegiones(v);
             if (!rev.partes.length) return { ok: false, error: 'Escribe al menos una region.' };
-            if (rev.china) return { ok: false, bloquear: true, error: '⛔ China continental esta PROHIBIDA sin excepcion (linea roja del contrato). No se puede activar. Escala a Stella en privado. Ojo: "habla chino" no es lo mismo que "China continental".' };
-            if (rev.restringidas.length) return { ok: false, bloquear: true, error: `⛔ Region restringida: ${rev.restringidas.join(', ')}. No hay acceso al front-end ahi. Escala a Stella en privado, sin workaround y sin hablarlo en grupos.` };
+            if (rev.china) return { ok: false, bloquear: true, error: '⛔ China continental esta PROHIBIDA sin excepcion (linea roja del contrato). No se puede activar. Escala a Stella en privado. Ojo: "chinohablante" no es lo mismo que "China continental".' };
+            if (rev.restringidas.length) return { ok: false, bloquear: true, error: `⛔ Region restringida: ${rev.restringidas.join(', ')}. Escala a Stella en privado, sin soluciones alternativas y sin hablarlo en el grupo.` };
             return { ok: true, valor: String(v).trim() };
           },
         },
@@ -192,7 +186,7 @@ const PASOS = [
           validar: (v) => {
             const b = si(v);
             if (b === true) return { ok: true, valor: true };
-            if (b === false) return { ok: false, bloquear: true, error: '🔒 Candado: cualquier region fuera de la lista se confirma caso por caso con Stella. Escala en privado y vuelve cuando tengas la confirmacion.' };
+            if (b === false) return { ok: false, bloquear: true, error: '🔒 Candado: cualquier region fuera de la lista se confirma caso por caso con Stella. Escala en privado y vuelve con la confirmacion.' };
             return { ok: false, error: 'Responde si o no.' };
           },
         },
@@ -204,38 +198,40 @@ const PASOS = [
     fase: 'C1',
     titulo: 'Confirmar que puede abrir y firmar con esa wallet',
     que: [
-      'Pregunta siempre: "Puedes abrir esta wallet y firmar con ella?"',
-      'Hay gente que pega una direccion de deposito de exchange. Al entrar le sale "wallet is not a registered agent" y concluye que el sistema esta roto.',
-    ],
-    guiones: (a) => [
-      { tipo: 'ENVIAR', titulo: 'Pregunta de control', texto: `Una pregunta rapida antes de enviarlo: la wallet ${r(a.wallet)} la puedes abrir y firmar con ella tu mismo? Tiene que ser una wallet tuya (OKX o Binance), no una direccion de deposito de exchange.` },
-    ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura de la respuesta del agente confirmando que firma con esa wallet.' },
-  },
-  {
-    id: 'c1_avisos',
-    fase: 'C1',
-    titulo: 'Mandar las dos advertencias (no podra entrar hasta que confirmes)',
-    que: [
-      'Es la frase mas barata y mas olvidada de todo el proceso.',
-      'Si no la dices, intenta entrar hoy mismo, falla, y su primera impresion es "esta plataforma no sirve".',
+      'La pregunta va en el Mensaje 2: "¿Puedes abrir esa wallet y firmar con ella?". Aqui registras su respuesta.',
+      'Hay gente que pega una direccion de deposito de exchange: al entrar le sale "wallet is not a registered agent" y concluye que el sistema esta roto.',
+      'Si no respondio esa pregunta, reenviale el Mensaje 2 antes de seguir.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Las dos advertencias', texto: 'Dos recordatorios rapidos:\n\n1) Si la direccion de la wallet esta mal nunca vas a poder entrar: te va a salir "wallet is not a registered agent". No des una direccion de deposito de exchange, da la wallet con la que firmas.\n\n2) Hasta que te agreguemos al back office no vas a poder entrar, intentes lo que intentes. Es normal. Espera mi mensaje y luego entras.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 2 · Reenvío si no respondió la pregunta', texto: 'Importante sobre la wallet: es la que usarás para entrar.\nTiene que ser una que puedas abrir y firmar tú mismo. Lo mejor es OKX Wallet o Binance Wallet.\nNo uses una dirección de depósito de un exchange.\n¿Puedes abrir esa wallet y firmar con ella?\nCuando tenga los 4 datos, los envío de inmediato.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura de la respuesta del agente confirmando que abre y firma con esa wallet.' },
   },
   {
     id: 'c1_cs',
     fase: 'C1',
-    titulo: 'Enviar el alta a Customer Support en UN solo mensaje',
+    titulo: 'Enviar los datos a Customer Support en un solo mensaje',
     que: [
-      'Flujo: BD junta los 4 datos -> DM a CS -> CS pasa a Stella -> Stella agrega la wallet al portal -> SOLO ENTONCES el agente puede entrar.',
+      'Incluye nickname, wallet, upline, rate, modelo (agent system, referral o ambos), region y tu nombre como BD.',
+      'Flujo: BD -> CS -> Stella agrega la wallet al portal -> SOLO ENTONCES el agente puede entrar.',
     ],
     guiones: (a) => [
-      { tipo: 'INTERNO', titulo: 'Mensaje para Customer Support', texto: `New agent account request\nAgent: ${r(a.nickname)}\nEVM wallet: ${r(a.wallet)}\nUpline: ${r(a.upline)}\nApproved rate: ${r(a.tasa)}%\nModel: ${C.MODELOS[a.modelo] || r(a.modelo)}\nRegion: ${r(a.region)}\nBD: ${r(a.bd)} · Signed on: ${r(a.firmado && a.firmado.slice(0, 10))}` },
+      { tipo: 'INTERNO', titulo: 'Mensaje 4 · Interno, para Customer Support', texto: `New agent account request\nAgent: ${r(a.nickname)}\nEVM wallet: ${r(a.wallet)}\nUpline: ${r(a.upline)}\nApproved rate: ${a.tasa ? `${a.tasa}%` : '[__]'}\nModel: ${({ sistema: 'agent system', referido: 'referral', ambos: 'both' })[a.modelo] || '[agent system / referral / both]'} · Region: ${r(a.region, '[__]')} · BD: ${r(a.bd, '[tu nombre]')}` },
     ],
     prueba: { tipo: 'captura', pide: 'Captura del mensaje enviado a CS.' },
+  },
+  {
+    id: 'c1_avisos',
+    fase: 'C1',
+    titulo: 'Enviar las dos advertencias (justo después de mandar los datos a CS)',
+    que: [
+      'Es la frase mas barata del proceso y la que mas se olvida.',
+      'Si no se la dices, intentara entrar ese mismo dia, fallara y pensara que la plataforma no funciona.',
+    ],
+    guiones: () => [
+      { tipo: 'ENVIAR', titulo: 'Mensaje 3 · Las dos advertencias', texto: '¡Listo, ya lo envié! Dos cosas antes de que entres:\n1) Si la wallet está mal, verás el error "wallet is not a registered agent" y no podrás entrar.\n2) Hasta que te demos de alta en el back office, no vas a poder entrar aunque lo intentes. Es normal.\nEspera mi mensaje y ahí entras.' },
+    ],
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
 
   // ======================= M1 · PRIMER LOGIN =======================
@@ -244,7 +240,7 @@ const PASOS = [
     fase: 'M1',
     titulo: 'Esperar la confirmacion de que Stella agrego la wallet',
     que: [
-      'No le digas al agente que entre antes de esta confirmacion.',
+      'No le digas que entre antes de esta confirmacion.',
       'Plazo de M1: 24 h desde la firma. Si CS tarda, empuja tu.',
     ],
     prueba: { tipo: 'captura_o_texto', pide: 'Captura de la confirmacion de CS / Stella.' },
@@ -252,27 +248,26 @@ const PASOS = [
   {
     id: 'm1_listo',
     fase: 'M1',
-    titulo: 'Avisar "tu back office esta listo"',
+    titulo: 'Avisarle "tu back office ya está listo"',
     que: [
-      'Di de forma proactiva "es solo una firma, no toca tu dinero". Mucha gente ve "firmar" y se congela, y tu crees que esta ocupado.',
-      'El login es firma de wallet. Nunca pide frase semilla, llave privada, contrasena ni codigo SMS. Tu tampoco.',
-      'Si la wallet pide transferencia o aprobacion de tokens: NO confirmar, revisar la URL.',
+      'Dile de forma proactiva que es solo una firma y no toca su dinero. Mucha gente ve "firmar" y se congela.',
+      'El login nunca pide frase semilla, llave privada, contrasena ni codigo SMS. Tu tampoco los pidas.',
+      'Si la wallet pide una transferencia o aprobacion de tokens: NO confirmar, revisar la URL.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Tu back office esta listo', texto: `Tu back office esta listo, ya puedes entrar 👉 ${C.LINKS.portal}\n\nSe entra con firma de wallet, no con usuario y contrasena. Conecta tu wallet OKX o Binance y firma un mensaje de login: es SOLO una firma, no toca el dinero de tu wallet ni aprueba nada.\n\nUn consejo: no uses MetaMask, tiene problemas de compatibilidad al firmar. Si estas en MetaMask, cambiate.\n\nAvisame cuando entres y te guio.` },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 5 · "Tu back office está listo"', texto: '¡Tu back office ya está listo! Entra aquí 👉 https://agency.kixly.co\nNo hay usuario ni contraseña: conectas tu wallet OKX o Binance y firmas un mensaje.\nEs solo una firma. No toca el dinero de tu wallet ni aprueba nada.\nUn consejo: no uses MetaMask, da problemas al firmar.\nAvísame cuando entres y te guío paso a paso.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
   {
     id: 'm1_login',
     fase: 'M1',
     hito: 'M1',
-    titulo: 'El agente entro SOLO al back office y tiene su link',
+    titulo: 'El agente entró SOLO al back office y tiene su link',
     que: [
-      'Hecho = el agente entro el mismo a agency.kixly.co. "Ya le explique" no cuenta.',
-      'El primer login pide una firma extra de "registro de cuenta". Es normal.',
-      'Idioma: boton arriba a la derecha.',
-      'Si se atora, usa el boton de bloqueos: hay una respuesta para cada caso.',
+      'Hecho = entro el mismo a agency.kixly.co. "Ya le explique" no cuenta.',
+      'El primer login pide una firma extra de registro de cuenta. Es normal.',
+      'Si se atora, usa el boton de bloqueos. Cuando confirme que entro: materiales completos (C2) y los 3 puntos criticos (C3).',
     ],
     prueba: { tipo: 'captura', pide: 'Captura del agente dentro del portal (pagina Overview).' },
   },
@@ -281,78 +276,77 @@ const PASOS = [
   {
     id: 'c2_materiales',
     fase: 'C2',
-    titulo: 'Mandar el paquete completo de materiales (los 6 juntos)',
+    titulo: 'Enviar los materiales completos y el contenido diario',
     que: [
-      'SOLO ahora se manda el paquete: ya firmo y son sus herramientas para ganar dinero.',
-      'No mandes archivos viejos: nada que diga "solo BSC", "minimo 5 U", "celular no conviene", ni entradas de 77MaxWin / thealiceai.com.',
-      'No fijes una sola red en ningun tutorial.',
+      'Los archivos los adjuntas tu desde la seccion 6.1 del documento: el Agent Handbook (HTML) y los videotutoriales.',
+      'No reenvies archivos viejos. Si alguno dice "BSC only", "minimum 5 U" o menciona 77MaxWin o thealiceai.com, esta desactualizado.',
     ],
     checklist: [
-      'Introduccion completa del producto (Agent Handbook)',
-      'Tutorial del sistema de agentes (videos de login/deposito y de apostar por el cliente)',
-      'Tutorial del link de referido',
-      'Tutorial de apuestas en el sitio principal (registro + deposito)',
-      'Links de los canales de picks',
+      'Agent Handbook adjunto',
+      'Videos del back office (login, deposito, apostar por un cliente)',
+      'Videos para sus clientes (registro y deposito en Kixly)',
+      'Canal de picks en espanol',
       'Calendario de partidos de la semana',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Paquete completo', texto: 'Aqui va el paquete completo, tenlo a la mano:\n\n· Introduccion completa del producto (Agent Handbook)\n· Tutorial del sistema de agentes\n· Tutorial del link de referido\n· Tutorial de apuestas en el sitio (para clientes que juegan solos)\n· Canal de picks: reenvialo directo a tu grupo, es contenido listo\n· Calendario de partidos: se actualiza cada semana, publica alrededor de los partidos grandes\n\nLos dos ultimos son la forma mas facil de mantener activos a tus clientes. No los dejes sin usar.' },
-      { tipo: 'ENVIAR', titulo: 'Canales de picks', texto: `Canales de picks de Alice (analisis diario y calendario semanal):\nES ${C.LINKS.picks.ES}\nEN ${C.LINKS.picks.EN}\nKO ${C.LINKS.picks.KO}\nRU ${C.LINKS.picks.RU}\nZH ${C.LINKS.picks.ZH}` },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 6 · Materiales', texto: '¡Ya estás dentro! 🙌 Te dejo todo lo que necesitas para arrancar:\n📘 Agent Handbook: guía completa del sistema [adjuntar]\n🎥 Videos del back office: login, depósito y cómo apostar por un cliente [adjuntar]\n🎥 Videos para tus clientes: registro y depósito en Kixly [adjuntar]\nGuárdalos, te van a servir para resolver casi cualquier duda.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 7 · Contenido diario', texto: 'Y para que tengas contenido todos los días sin esfuerzo:\n📢 Canal de picks en español 👉 t.me/AliceSmartPicksES\n📅 Calendario de partidos: [link o adjunto]\nPuedes reenviarlos directo a tu comunidad, ya están listos para publicar.' },
     ],
     prueba: { tipo: 'captura', pide: 'Captura de los materiales enviados en el chat.' },
   },
 
-  // ======================= C3 · TRES REGLAS =======================
+  // ======================= C3 · TRES PUNTOS CRITICOS =======================
   {
     id: 'c3_red',
     fase: 'C3',
-    titulo: 'Regla 1: red de deposito (la unica donde un error pierde dinero)',
+    titulo: 'Punto crítico 1: red de depósito (el único error que pierde dinero real)',
     que: [
-      'Dila palabra por palabra y en un mensaje aparte.',
+      'Uno por uno, antes de su primer deposito. Este va en un mensaje aparte.',
       'Entrar con wallet EVM NO significa que el deposito use la misma red.',
-      'Wallet recomendada: OKX o Binance. Si usa MetaMask, sugierele cambiar sin esperar a que falle.',
+      'Anota la hora del envio como prueba. Sin prueba, el punto cuenta como no hecho.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Red de deposito', texto: 'Antes de depositar o retirar cualquier cosa: revisa siempre que redes muestra la pagina de deposito y siguela exactamente. Red equivocada = el dinero es muy dificil de recuperar.\n\nEs la unica regla de todo el proceso donde un error te hace perder dinero directo, por eso te la digo aparte. Revisa el QR y la direccion en texto antes de enviar. El deposito minimo es 10 USDT.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 8 · Red de depósito', texto: 'Antes de depositar o retirar: revisa siempre qué red indica la página de depósito y síguela al pie de la letra.\nSi usas una red equivocada, recuperar el dinero es muy difícil.\nTe lo digo aparte porque es el único error que te hace perder dinero directamente.\nRevisa el código QR y la dirección en texto antes de enviar.\nEl depósito mínimo es de 10 USDT.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
   {
     id: 'c3_regiones',
     fase: 'C3',
-    titulo: 'Regla 2: regiones restringidas (para el y para sus clientes)',
+    titulo: 'Punto crítico 2: regiones restringidas (para él y sus clientes)',
     que: [
-      'Cualquier tema de region: escalar a Stella. No inventes soluciones ni hables workarounds en el grupo.',
-      'Si inventas un workaround, tu nombre queda en el cuando algo salga mal.',
-      '"Habla chino" no es lo mismo que "China continental". Dejalo claro.',
+      'Cualquier tema de regiones se escala a Stella. No propongas soluciones alternativas ni lo hables en el grupo.',
+      '"Hispanohablante" o "chinohablante" no es lo mismo que una region prohibida. Deja clara esa diferencia.',
+      'Anota la hora del envio como prueba.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Regiones restringidas', texto: 'Una lista que tenemos que revisar, aplica para ti Y para tus clientes:\n\nSingapur, Hong Kong, Macao, Taiwan, EE.UU., Australia y Vietnam: ahi el acceso esta bloqueado.\n\nChina continental esta totalmente prohibida: nada de promocion, reclutamiento ni cobro en RMB a residentes chinos. Es una linea roja del contrato.\n\nSi tienes clientes en algun lugar fuera de esta lista, dime exactamente donde y te confirmo cada uno.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 9 · Regiones restringidas', texto: 'Hay una lista que aplica a ti y a tus clientes:\n🚫 Singapur, Hong Kong, Macao, Taiwán, EE. UU., Australia y Vietnam: el acceso está bloqueado.\n🚫 China continental está totalmente prohibida: nada de promoción, reclutamiento ni cobros en RMB a residentes chinos. Es una línea roja del contrato.\nSi tienes clientes en otro país que no esté en la lista, dime exactamente dónde y lo confirmo caso por caso.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
   {
     id: 'c3_retiro',
     fase: 'C3',
-    titulo: 'Regla 3: la direccion de retiro nunca es la de deposito',
+    titulo: 'Punto crítico 3: la dirección de retiro no es la de depósito',
+    que: ['Anota la hora del envio como prueba.'],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Direccion de retiro', texto: 'Cuando retires, la direccion debe ser una wallet EXTERNA en la red correcta, nunca la direccion de deposito que te dio el sistema. Hay una advertencia roja en la pagina, pero igual la gente se equivoca.\n\nPuedes tocar MAX para llenar el monto retirable completo. Los retiros se revisan a mano: solo te puedo prometer "dentro de 1 dia habil". En tu historial puedes abrir el explorador de bloques para ver cuando llega.\n\nOjo: lo que retiras en la pagina de billetera es tu pool sin asignar. La comision va aparte y se paga desde otra billetera de comision. No las mezcles.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 10 · Dirección de retiro', texto: 'Cuando retires, la dirección debe ser una wallet EXTERNA en la misma red, nunca la dirección de depósito que te dio el sistema.\nPuedes tocar MAX para retirar todo el saldo disponible.\nLos retiros se revisan manualmente y llegan en máximo 1 día hábil. En tu historial puedes ver cuándo llega on-chain.\nOjo: lo que retiras desde Wallet es tu saldo sin asignar. Las comisiones se pagan desde otra wallet aparte.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
 
-  // ======================= M2 · RECORRIDO =======================
+  // ======================= M2 · RECORRIDO DE 6 PASOS =======================
   {
     id: 'm2_apertura',
     fase: 'M2',
-    titulo: 'Convencerlo de hacer UNA apuesta con su propio dinero',
+    titulo: 'Arranque del recorrido: que haga una apuesta con su propio dinero',
     que: [
-      'Es la accion de mayor impacto de todo el proceso.',
-      'El bloqueo mas comun de M2 no es tecnico: no quiere depositar ni apostar ("primero veo", "primero publico en el grupo").',
-      'NO digas "si la pierdes la cubrimos": esta pendiente de confirmar.',
+      'Objetivo de M2: una apuesta propia, con su dinero, liquidada y a su nombre. Plazo T+3.',
+      'Es la accion de mayor impacto del proceso. Si dice "primero quiero mirar" o "voy a publicar en el grupo a ver quien se apunta", reenvia este mensaje: vale la pena insistir.',
+      '⚠️ No le digas "si pierdes, te lo cubrimos". El documento lo marca como TBC. Hasta que tu lider lo confirme, no lo prometas.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Apertura del recorrido', texto: 'Te guio ahora por todo el flujo: 6 pasos, unos 10 minutos. Despues vas a saber exactamente como funciona.\n\nTe sugiero hacer primero una apuesta con tu propio dinero, el monto que quieras, 10 U esta bien. No es para gastar: es para que tu mismo pases por el flujo.\n\nCuando un cliente te pregunte "cuanto tarda mi deposito", "por que esta apuesta salio ganada" o "donde esta mi dinero" y no sepas responder, lo pierdes a la primera. Si ya lo hiciste tu, se lo puedes ensenar.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 11 · Arranque del recorrido', texto: 'Ahora te guío por el flujo completo: son 6 pasos, unos 10 minutos.\nTe recomiendo hacer una primera apuesta con tu propio dinero, desde 10 USDT. No se trata de gastar, sino de que conozcas el proceso. ¿Empezamos?\nCuando un cliente te pregunte "¿cuánto tarda mi depósito?" o "¿dónde está mi dinero?", vas a poder responderle con seguridad.' },
     ],
     prueba: { tipo: 'captura_o_texto', pide: 'Captura de la respuesta del agente aceptando hacer su apuesta.' },
   },
@@ -360,43 +354,35 @@ const PASOS = [
     id: 'm2_cliente',
     fase: 'M2',
     titulo: 'Paso 2 de 6: agregar un cliente',
-    que: [
-      'Menu Customers -> + Add customer -> nota con el nombre -> Confirm add.',
-      'Muchos clientes: Bulk import (max 1,000 filas / 2 MiB). Si fallan filas, reimportar SOLO las fallidas.',
-      'Status "Active" = agregado.',
-    ],
+    que: ['Si importa varios y fallan filas, que reimporte SOLO las filas fallidas.', 'Adjunta la captura de pantalla del paso si la tienes: lo entiende mas rapido.'],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Agregar cliente', texto: 'Paso 2: Customers -> Add customer -> escribe un nombre de referencia (por ejemplo "Mike") -> Confirm. Listo.\n\nMuchos clientes? Usa Bulk import: descarga la plantilla, 2 campos: display_name (obligatorio) e initial_balance_usdt (opcional, les asigna saldo de una vez).\n\nDespues veras en la lista el nombre, el Saba ID y el estado. Estado Active = hecho.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 12 · Paso 2: agregar un cliente', texto: 'Paso 2: Customers → + Add customer → escribe un nombre de referencia (ej. "Mike") → Confirm.\nTus clientes no necesitan registrarse ni iniciar sesión.\n¿Tienes muchos? Usa Bulk import: descargas la plantilla y llenas display_name (obligatorio) e initial_balance_usdt (opcional).\nCuando veas el estado "Active", listo.' },
     ],
     prueba: { tipo: 'captura', pide: 'Captura de la lista de clientes con el cliente en estado Active.' },
   },
   {
     id: 'm2_deposito',
     fase: 'M2',
-    titulo: 'Paso 3 de 6: depositar USDT en su pool (min 10 USDT)',
-    que: [
-      'Wallet / funds -> Deposit -> QR o direccion. Revisar activo, red, direccion y minimo en la pagina.',
-      'Si el deposito no llega: pide el hash. Que NO mande otro deposito de prueba.',
-    ],
+    titulo: 'Paso 3 de 6: depositar en su pool (mínimo 10 USDT)',
+    que: ['Si el deposito no llega: on-chain tarda segundos, que refresque. Pide el hash. Que NO mande otro deposito de prueba.'],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Depositar', texto: 'Paso 3: Wallet / funds -> Deposit -> escanea el QR o copia la direccion.\n\nAntes de enviar, revisa que redes muestra la pagina de deposito y siguela. Red equivocada = dinero muy dificil de recuperar. Es el unico punto del flujo donde un error te cuesta dinero.\n\nMinimo 10 USDT, menos puede no acreditarse. Revisa QR y direccion en texto: las transferencias on-chain no se pueden revertir.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 13 · Paso 3: depositar en tu pool', texto: 'Paso 3: Wallet / funds → Deposit → escanea el QR o copia la dirección.\nAntes de enviar, revisa qué red indica la página y síguela. Si usas otra red, recuperar el dinero es muy difícil.\nMínimo 10 USDT. Un monto menor puede no acreditarse.\nRevisa el QR y la dirección en texto: las transferencias on-chain no se pueden revertir.' },
     ],
     prueba: { tipo: 'hash', pide: 'Pega el hash de la transaccion del deposito.' },
   },
   {
     id: 'm2_asignar',
     fase: 'M2',
-    titulo: 'Paso 4 de 6: asignar saldo al cliente (el bloqueo #1)',
+    titulo: 'Paso 4 de 6: asignar saldo al cliente (el bloqueo número uno)',
     que: [
-      'Dinero en el pool NO es dinero del cliente. Hay que asignarlo.',
-      'Billetera -> "Allocate", o detalle del cliente -> "Adjust balance". El motivo es OBLIGATORIO.',
-      'Por que mata agentes: al apostar el sistema revisa saldo del cliente Y pool real. Deposita 100, agrega cliente, apuesta, falla, cree que esta roto y se calla. No te va a preguntar.',
-      'Si los numeros no cumplen la formula del pool: ESCALA DE INMEDIATO.',
+      'Acompanalo TU en este paso.',
+      'Por que mata agentes: al apostar el sistema revisa el saldo del cliente Y el pool real. Deposita, agrega cliente, apuesta, falla, cree que esta roto y se calla.',
+      'Si sus numeros no cuadran con la formula: escala de inmediato y dile que deje de probar botones. Es un descuadre de fondos, uno de los 5 casos que siempre se escalan.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Asignar saldo', texto: 'El paso 4 es el importante, aqui se atora la mayoria: despues de que el dinero esta en tu pool, tienes que asignarle saldo al cliente antes de poder apostar por el.\n\nDos formas: el boton "Allocate" en la billetera, o "Adjust balance" en el detalle del cliente. Eliges cliente -> monto -> motivo -> confirmar.\n\nEl motivo es obligatorio: sin el, el boton no funciona. Escribe lo que sea, por ejemplo "primera recarga".' },
-      { tipo: 'ENVIAR', titulo: 'La formula del pool', texto: 'Recuerda una formula y nunca te vas a asustar al ver tu cuenta:\n\nTu pool real = saldo sin asignar + saldos de todos tus clientes sumados\n\nRecargar a un cliente solo mueve dinero de un bolsillo a otro: tu total real no cambia. Que baje el "saldo sin asignar" es normal.' },
-      { tipo: 'ENVIAR', titulo: 'Si pregunta para que sirve', texto: 'Es para tu propia contabilidad: un cliente te puede dar 100 pero apostar solo 10 o 20 al principio. Con el registro de recargas ves exactamente cuanto puso y uso cada cliente, y liquidar nunca se vuelve un desorden.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 14 · Paso 4: asignar saldo al cliente', texto: 'El paso 4 es el más importante y donde casi todos se traban:\nTener dinero en tu pool no significa que el cliente tenga saldo. Primero debes asignárselo.\nDos formas: el botón "Allocate" en Wallet, o "Adjust balance" en los detalles del cliente.\nEliges cliente → monto → motivo → confirmas.\nEl motivo es obligatorio, sin él el botón no funciona. Escribe cualquier cosa, ej. "primera recarga".' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 15 · La fórmula del dinero', texto: 'Recuerda esta fórmula y nunca te vas a preocupar al ver tu cuenta:\nTu pool real = saldo sin asignar + la suma de los saldos de todos tus clientes.\nRecargar a un cliente solo mueve dinero de un bolsillo a otro. Tu total no cambia.\nEs normal que el "saldo sin asignar" baje.' },
+      { tipo: 'ENVIAR', titulo: 'Si pregunta para qué sirve asignar saldo', texto: 'Es para que lleves bien tus cuentas: un cliente puede darte 100 y apostar solo 10 o 20 al principio.\nCon el registro de recargas ves cuánto puso y cuánto usó cada cliente, y liquidar con ellos es mucho más fácil.' },
     ],
     prueba: { tipo: 'captura', pide: 'Captura del cliente con saldo asignado.' },
   },
@@ -404,122 +390,107 @@ const PASOS = [
     id: 'm2_apostar',
     fase: 'M2',
     titulo: 'Paso 5 de 6: apostar por el cliente',
-    que: [
-      'Desde la lista o el detalle del cliente: "Place bet". Arriba dice por quien apuesta (nombre + Saba ID) y su saldo.',
-      'Antes de confirmar: cliente, partido, mercado, monto y momio.',
-      'Para apostar por si mismo: www.kixly.co conectando su wallet. Para M2 sirve cualquiera de las dos.',
-    ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Apostar por el cliente', texto: 'Paso 5: desde la lista de clientes o el detalle, toca "Place bet". Arriba dice por quien apuestas (nombre + Saba ID) y su saldo, con un boton para refrescar.\n\nHazlo habito: mira esa linea antes de cada apuesta para confirmar que es el cliente correcto. Con muchos clientes, apostar a la persona equivocada es lo mas dificil de arreglar: el ticket ya quedo y no se puede cambiar.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 16 · Paso 5: apostar por el cliente', texto: 'Paso 5: en la lista o en los detalles del cliente, toca "Place bet".\nArriba verás para quién apuestas (nombre + Saba ID) y su saldo.\nHazlo un hábito: revisa esa línea antes de cada apuesta. Una apuesta al cliente equivocado no se puede cambiar.\n¿Quieres apostar para ti? Entra a www.kixly.co y conecta tu wallet.' },
     ],
     prueba: { tipo: 'captura', pide: 'Captura de la apuesta colocada.' },
   },
   {
     id: 'm2_ticket',
     fase: 'M2',
-    titulo: 'Paso 6 de 6: revisar el ticket y liquidar offline',
-    que: [
-      'Neto a liquidar: positivo = el cliente le debe; negativo = el le debe al cliente; 0 = parejo.',
-      'Tickets abiertos NO cuentan. Nunca liquidar con un ticket sin terminar.',
-      '"Settled offline" solo despues de que el dinero cambio de manos de verdad. Masivo: hasta 200 clientes.',
-    ],
+    titulo: 'Paso 6 de 6: revisar el ticket y liquidar',
+    que: ['"Settled offline" solo despues de que el dinero cambio de manos de verdad.'],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Revisar y liquidar', texto: 'Paso 6: en el detalle del cliente ves todos sus tickets, su resultado y el monto a liquidar.\n\nComo leerlo: positivo = te debe, negativo = le debes, 0 = parejo.\n\nCuando ya pagaste o cobraste offline, toca "Settled offline" para que esos tickets no se cuenten dos veces. Muchos clientes? Liquida hasta 200 a la vez.\n\nOjo: los tickets que siguen en juego NO se incluyen. No liquides dinero de una apuesta que no ha terminado.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 17 · Paso 6: revisar el ticket y liquidar', texto: 'Paso 6: en los detalles del cliente ves sus tickets, ganancias/pérdidas y el monto por liquidar.\nPositivo = él te debe. Negativo = tú le debes. 0 = están a mano.\nCuando pagues o cobres por fuera, toca "Settled offline" para no contarlo dos veces. Puedes liquidar hasta 200 tickets a la vez.\nOjo: las apuestas en curso no se incluyen. No liquides una apuesta que no ha terminado.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura de Tickets / reconciliation o confirmacion de que entendio la liquidacion.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura de Tickets / reconciliation o la hora en que revisaron juntos la liquidacion.' },
   },
   {
     id: 'm2_liquidada',
     fase: 'M2',
     hito: 'M2',
     titulo: 'Una apuesta LIQUIDADA a su nombre (verificable en el sistema)',
-    que: [
-      'Hecho = ticket liquidado (ganado o perdido). Una apuesta abierta no cuenta.',
-      'Plazo de M2: firma + 3 dias.',
-    ],
+    que: ['Hecho = ticket liquidado (ganado o perdido). Una apuesta abierta no cuenta.', 'Plazo de M2: firma + 3 dias.'],
     prueba: { tipo: 'captura', pide: 'Captura del ticket liquidado con su referencia.' },
   },
 
-  // ======================= C7 · VACUNAS =======================
+  // ======================= C7 · VACUNAS Y COMISION =======================
   {
     id: 'c7_cero',
     fase: 'C7',
-    titulo: 'Vacuna 1: algunas semanas la comision sera 0',
+    titulo: 'Vacuna 1: habrá semanas con comisión 0 (la más importante)',
     que: [
-      'Se dice AHORA: acaba de apostar y sabe que el resultado es aleatorio. Al firmar no escucha; despues suena a excusa.',
-      'Cuando llegue el primer periodo negativo, escribele TU primero.',
+      'Se envia en M2, antes de su primera liquidacion: adelantarse para que no piense que lo estan enganando.',
+      'Cuando llegue el primer periodo negativo, envia el Mensaje 19 TU primero, sin esperar a que pregunte. Dicho antes se lee como honestidad; explicado despues suena a excusa.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Comision 0 algunas semanas', texto: 'Te quiero decir algo ahora, porque VA a pasar: algunas semanas tu comision sera 0, incluso negativa.\n\nAcabas de apostar tu mismo, asi que sabes por que: los resultados son aleatorios. Si en una semana tus clientes ganan en total, tu neto de esa semana es negativo y la comision es 0.\n\nLa parte negativa se arrastra y se compensa con semanas positivas. Una vez compensada, todo sigue normal. NUNCA te vamos a pedir que la pagues.\n\nMira el mes y el trimestre, no una sola semana. Una primera semana en cero es normal, no un problema.' },
-      { tipo: 'ENVIAR', titulo: 'Para cuando llegue el primer periodo negativo (mandalo tu primero)', texto: 'Aviso rapido: tu neto de este periodo es negativo, asi que la comision de esta semana es 0.\n\nEl monto es [__] U. Se arrastra y se compensa con semanas positivas: no pagas nada. Te mando el desglose.\n\nEs la variacion normal de la que hablamos al inicio. Tu volumen esta creciendo, se va a emparejar en los siguientes periodos.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 18 · Vacuna 1', texto: 'Te lo cuento desde ya porque VA a pasar: algunas semanas tu comisión será 0, o incluso negativa.\nYa hiciste una apuesta, así que sabes por qué: los resultados son aleatorios. Si en una semana tus clientes ganan en total, tu neto es negativo y la comisión es 0.\nEse negativo se arrastra y se compensa con las semanas positivas siguientes. NUNCA te vamos a pedir que lo pagues.\nMira el mes y el trimestre, no una sola semana. Que la primera semana salga en cero es normal.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 19 · Cuando llegue el primer periodo negativo (envíalo tú primero)', texto: 'Te aviso: tu neto de este periodo salió negativo, así que esta semana la comisión es 0.\nEl monto es de [__] USDT. Se arrastra y se compensa con las próximas semanas positivas. Tú no pagas nada.\nEs la variación normal de la que hablamos al inicio. Tu volumen está creciendo y se va a equilibrar. Ahora te mando el desglose.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el Mensaje 18.' },
   },
   {
     id: 'c7_7030',
     fase: 'C7',
-    titulo: 'Vacuna 2: el 70 / 30',
+    titulo: 'Vacuna 2: el esquema 70 / 30',
     que: [
-      'No es descuento: es pago diferido. Protege a los que juegan limpio y cubre ajustes (tickets anulados o anormales).',
-      'TBC: cuando se libera el 30%. Di solo "se libera despues", sin numero de semanas.',
-      'Los primeros periodos la pagina no muestra la reserva: tu mandas el desglose a mano.',
+      '⚠️ TBC: todavia no esta confirmado cuando se libera el 30% (a fin de mes o en una reserva movil de 4 semanas). Di solo "se libera mas adelante" y no des plazos.',
+      'Los primeros periodos la pagina de comisiones no muestra la reserva: tu mandas el desglose a mano.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: '70 / 30', texto: 'Como funcionan los pagos: cada periodo se paga el 70% de lo que te corresponde, y el 30% va a una reserva que se libera despues.\n\nEs estandar en la industria: cubre ajustes posteriores como tickets anulados o anormales. No se te quita, se te paga despues.\n\nLos primeros periodos la pagina de comision todavia no muestra la reserva, asi que yo te mando el desglose de la reserva, con el calculo completo para que lo revises.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 20 · Vacuna 2', texto: 'Así funcionan los pagos: en cada periodo recibes el 70 % de lo que te corresponde y el 30 % queda en reserva y se libera más adelante.\nEs estándar en la industria y cubre ajustes posteriores, como tickets anulados o irregulares. No se te descuenta, solo se paga después.\nEn los primeros periodos la página de comisiones no muestra la reserva, así que yo te envío el desglose con el cálculo completo para que lo revises.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
   {
     id: 'c7_overview',
     fase: 'C7',
-    titulo: 'Vacuna 3: Overview NO es la base de liquidacion',
-    que: [
-      'Overview usa los ultimos 30 dias UTC, otra ventana que el periodo de comision.',
-      'Ya paso: un agente uso el volumen de Overview para pelear su comision. Nunca concilies con Overview.',
-    ],
+    titulo: 'Vacuna 3: la página Overview no es la base de la liquidación',
+    que: ['Ya paso: un agente uso el volumen de Overview para discutir su comision. Nunca concilies con Overview.'],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Overview no es la base', texto: 'Un malentendido comun: los numeros de volumen en "Overview" son para que veas como va tu negocio. NO son sobre lo que se calcula la comision.\n\nOverview usa una ventana de tiempo distinta al periodo de comision. Si multiplicas el volumen de Overview por tu tasa, nunca va a coincidir con lo que recibes.\n\nPara comision, mira la pagina Commission y el estado de cuenta. Si algo no cuadra, traeme el estado y lo revisamos linea por linea.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 21 · Vacuna 3', texto: 'Un malentendido muy común: el volumen que ves en "Overview" sirve para seguir cómo va tu negocio. NO es la base para calcular tu comisión.\nOverview usa un periodo de tiempo distinto al de las comisiones. Si multiplicas ese volumen por tu rate, nunca te va a coincidir con lo que recibes.\nPara tu comisión, revisa la página Commission y el estado de liquidación. Si algo no cuadra, me lo traes y lo revisamos línea por línea.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
   {
     id: 'c7_comision',
     fase: 'C7',
-    titulo: 'Explicar la comision (version corta, sin formulas)',
+    titulo: 'Explicar la comisión (versión corta, sin fórmulas ni coeficientes)',
     que: [
-      'Base = ingreso neto, no lo que ve en el portal. Si multiplica el GGR por su tasa, su numero siempre saldra mas alto.',
-      'No entres en coeficientes ni formulas. El coeficiente de deduccion NUNCA se revela.',
-      'Interno: hoy la liquidacion real es GGR x tasa (el NGR esta en desarrollo). No expliques la formula de NGR.',
+      '🔒 Interno: hoy la liquidacion se calcula como GGR x rate, porque el coeficiente de deduccion esta en desarrollo. No le expliques la formula NGR por iniciativa propia. El valor del coeficiente nunca se comparte.',
+      'Retiros de comision: se liquida cada 7 dias en una cuenta aparte del pool; no exige volumen minimo; aprobacion en 1 dia habil (nunca prometas "en unas horas").',
+      '⚠️ TBC: el retiro minimo de comision (50 o 5 USDT) esta pendiente. No le des una cifra.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Como se calcula', texto: 'Se calcula sobre las perdidas netas de tus clientes, menos los costos promocionales que la plataforma pago de verdad (bonos, rebates, etc.), y lo que queda se reparte contigo segun tu tasa.\n\nCada periodo te damos el calculo completo para que lo revises tu.' },
-      { tipo: 'ENVIAR', titulo: 'Si sigue preguntando (y ahi te detienes)', texto: 'En la primera liquidacion te mando el desglose detallado: con los numeros va a quedar claro.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 22 · La explicación corta', texto: 'Tu comisión se calcula sobre las pérdidas netas de tus clientes, menos los costos promocionales que la plataforma realmente pagó (bonos, reembolsos, etc.). Lo que queda se reparte contigo según tu rate.\nEn cada periodo te damos el cálculo completo para que lo revises tú mismo.' },
+      { tipo: 'ENVIAR', titulo: 'Si sigue insistiendo (y ahí te detienes)', texto: 'En la primera liquidación te envío el desglose detallado. Con los números lo vas a ver claro.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el mensaje.' },
   },
 
-  // ======================= M3 · PRIMER CLIENTE =======================
+  // ======================= M3 · PRIMER CLIENTE REAL =======================
   {
     id: 'm3_post',
     fase: 'M3',
-    titulo: 'TU escribes el post de lanzamiento y se lo entregas',
+    titulo: 'El post de lanzamiento: lo escribes tú, sin excepción',
     que: [
-      'Despues de firmar y aprender, el agente NO empieza a promover solo. Hay que empujarlo y hacer buena parte del trabajo.',
-      'Tiene miedo de publicar (perder seguidores, que lo baneen). Con el post listo su trabajo pasa a ser copiar y pegar.',
-      'Elige la version segun su tipo de canal. Dejalo cambiar el tono.',
+      '"Ayudar" no es mandar un link e irse: tienes que verlo hacerlo. Plazo de M3: T+7.',
+      'El bloqueo mas comun es que le da miedo publicar (perder seguidores, que lo bloqueen, decir algo mal). Con el post listo, su trabajo es copiar y pegar.',
+      'Sugierele empezar con contenido de partidos o su experiencia real, sin convertir la cuenta en publicidad de un dia para otro.',
     ],
     guiones: (a) => {
       const out = [
-        { tipo: 'ENVIAR', titulo: 'Entrega del post', texto: 'Ya te escribi tu post de lanzamiento: publicalo tal cual o ajusta el tono antes.\n\nLo escribi para tu tipo de canal. Si alguna linea no suena a ti, cambiala, no te preocupes por mis palabras. Publicarlo importa mas que que quede perfecto.\n\nMandame el link cuando este arriba: veo la respuesta y ajusto el segundo post segun eso.' },
+        { tipo: 'ENVIAR', titulo: 'Mensaje 25 · Entrega del post', texto: 'Ya te escribí tu post de lanzamiento. Publícalo tal cual o ajusta el tono primero.\nLo hice pensando en tu tipo de canal. Si alguna frase no suena a ti, cámbiala sin problema. Lo importante es publicarlo, no que quede perfecto.\nMándame el link cuando lo subas. Voy a ver la respuesta y ajusto el segundo post según eso.' },
       ];
-      const grupo = { tipo: 'REENVIAR', titulo: 'Version A · Anuncio para grupo (sistema de agentes)', texto: '[Nuevo servicio]\nApuestas deportivas y de esports, casa internacional, mejores momios que la mayoria.\n\nQuieres apostar? Mandame un mensaje: que partido, que pick y cuanto.\nYo la coloco, te mando captura al terminar el partido y liquidamos en persona.\n\nSin registro, sin comprar USDT, sin apps: solo un mensaje.\n\nTop 5 ligas de futbol, NBA, League of Legends, CS, Dota. Previo y en vivo.\n\nEscribeme si te interesa.' };
-      const canal = { tipo: 'REENVIAR', titulo: 'Version B · Post para canal (ambos caminos)', texto: `Ya abierto: apuestas deportivas y de esports.\n\nCasa internacional: futbol, basquetbol, tenis y esports, previo y en vivo, momios competitivos.\n\nDos formas, tu eliges:\n① Yo la coloco por ti, sin registro. Mandame que y cuanto, la coloco y te mando captura, liquidamos en persona. Lo mas facil.\n② Juega tu mismo: registrate con mi link, deposita, apuesta y retira cuando quieras: ${a.linkReferido || '[tu link personal de referido]'}\n\nEscribeme, pregunta lo que sea.` };
-      const corto = { tipo: 'REENVIAR', titulo: 'Version C · Una linea (para reenviar)', texto: 'Tomo apuestas de deportes y esports, casa internacional, sin registro y sin USDT. Dime a que quieres apostar, captura al terminar el partido y liquidamos en persona.' };
-      const poster = { tipo: 'REENVIAR', titulo: 'Version D · Post con poster (referido)', texto: `⚡ Hace poco encontre una plataforma nueva que se llama Kixly, la comparto.\n🏆 Es un sitio de apuestas deportivas y de esports. Futbol ⚽, basquetbol 🏀, CS, Dota, LoL, todo en un lugar. Depositos y retiros en USDT, sin esperar al banco.\n👀 Lo que mas me llamo la atencion:\n✦ Mercados profundos en futbol y esports, no solo ganador\n✦ USDT entra y sale al instante\n✦ Seis niveles VIP\n✦ Soporte 24/7\n🔗 ${a.linkReferido || '[tu link personal de referido]'}\n💬 Despues dime en los comentarios que te parecio, la version honesta.\n⚠️ Solo +18. Apuesta solo lo que puedes perder. Aplican regiones restringidas.` };
-      const dm = { tipo: 'REENVIAR', titulo: 'DM uno a uno (apuesta por encargo)', texto: 'Hola, ya puedo tomar apuestas de deportes y esports por ti.\n\nNo tienes que hacer nada: sin cuenta, sin comprar USDT, sin descargar nada. Solo dime que partido, por ejemplo "100 a que gana el Real Madrid", la coloco y te mando captura cuando se liquide.\n\nLiquidamos en privado, cuando quieras. Futbol, basquetbol, esports, tenis, previo y en vivo.\n\nQuieres probar? Dime un monto y te lo preparo.' };
-      if (a.modelo === 'referido') out.push(a.tipoCanal === 'grupo' ? canal : poster, canal);
-      else if (a.tipoCanal === 'grupo' || a.tipoCanal === 'master' || a.tipoCanal === 'sub') out.push(grupo, corto, dm);
-      else out.push(canal, corto, dm);
+      const link = a.linkReferido || '[tu link de referido]';
+      const A = { tipo: 'REENVIAR', titulo: 'Versión A · Anuncio en grupo (gente que se conoce), sistema de agente', texto: '[Nuevo servicio]\nApuestas deportivas y de esports, casa internacional, con mejores cuotas que la mayoría.\n¿Quieres apostar? Escríbeme en una línea: qué partido, qué pronóstico y cuánto.\nYo hago la apuesta, te mando captura después del partido y liquidamos por fuera.\nSin registro, sin comprar USDT, sin apps. Solo un mensaje.\nTop 5 ligas de fútbol, NBA, LoL, CS y Dota, antes del partido y en vivo. Escríbeme si te animas.' };
+      const B = { tipo: 'REENVIAR', titulo: 'Versión B · Post en canal (seguidores que no conoce), ambos caminos', texto: `Ya abrí apuestas deportivas y de esports.\nCasa internacional: fútbol, básquet, tenis y esports, antes del partido y en vivo, con cuotas competitivas.\nDos opciones, tú eliges:\n① Yo apuesto por ti, sin registro. Me dices qué y cuánto, te mando captura y liquidamos por fuera. Lo más fácil.\n② Juegas tú: te registras con mi link, depositas, apuestas y retiras cuando quieras: ${link}\nEscríbeme y pregúntame lo que quieras.` };
+      const Cc = { tipo: 'REENVIAR', titulo: 'Versión C · Mensaje corto para reenviar', texto: 'Estoy tomando apuestas de deportes y esports. Casa internacional, sin registro y sin USDT. Dime a qué quieres apostar, te mando captura después del partido y liquidamos por fuera.' };
+      const D = { tipo: 'REENVIAR', titulo: 'Versión D · Post para comunidad con póster de Kixly (referidos)', texto: `⚡ Hace poco encontré una plataforma nueva llamada Kixly y quería compartirla.\n🏆 Es de apuestas deportivas y esports: fútbol ⚽, básquet 🏀, CS, Dota y LoL en un solo lugar. Puedes seguir los partidos, revisar los mercados de cada uno y apostar según lo que digan los números. Depósitos y retiros en USDT, sin esperar al banco.\n👀 Lo que más me llamó la atención:\n✦ Muchos mercados en fútbol y esports, no solo ganador\n✦ Depósitos y retiros en USDT al instante\n✦ Seis niveles VIP, de Starter a Black (solo por invitación)\n✦ Soporte 24/7 en EN / ZH / RU / KO\n🔥 Si ya pasas las noches analizando partidos, vale la pena darle una hora. Regístrate con mi link y compruébalo tú mismo.\n🔗 ${link}\n💬 Después cuéntame en los comentarios qué te pareció. La versión honesta, no la amable.\n⚠️ +18. Apuesta solo lo que puedas perder. Aplican restricciones por región.` };
+      const DM = { tipo: 'REENVIAR', titulo: 'Mensaje directo 1 a 1: apuesta por encargo', texto: '¡Hola! Ya puedo tomar apuestas de deportes y esports por ti.\nNo tienes que hacer nada: ni cuenta, ni comprar USDT, ni descargar apps. Solo dime el partido, por ejemplo "100 a que gana el Real Madrid", yo apuesto y te mando la captura cuando se resuelva.\nLiquidamos en privado, cuando quieras. Fútbol, básquet, esports y tenis, antes del partido y en vivo.\n¿Quieres probar? Dime un monto y te lo preparo.' };
+      if (a.modelo === 'referido') out.push(D, B);
+      else if (a.modelo === 'sistema') out.push(['grupo', 'master', 'sub'].includes(a.tipoCanal) ? A : B, Cc, DM);
+      else out.push(['grupo', 'master', 'sub'].includes(a.tipoCanal) ? A : B, D, Cc, DM);
       return out;
     },
     prueba: { tipo: 'captura', pide: 'Captura del post PUBLICADO en su canal o grupo.' },
@@ -528,19 +499,18 @@ const PASOS = [
     id: 'm3_link',
     fase: 'M3',
     aplica: (a) => a.modelo === 'referido' || a.modelo === 'ambos',
-    titulo: 'Link de referido: conseguirlo, probarlo y verlo usarlo',
+    titulo: 'Camino de referidos: obtener y usar su link',
     que: [
-      'El link no necesita alta en back office: lo saca el agente.',
-      'Probarlo antes de compartir: que abra y que el codigo sea el suyo.',
-      'Atribucion: se liga al REGISTRO, gana el ultimo clic, no se reasigna, vale 12 meses. Copiar el link COMPLETO, nunca link y codigo por separado.',
+      '⚠️ TBC: esta pendiente confirmar la pagina de referidos (kixly.co/referral vs thealiceai.com/referral). Confirmala antes de enviar y reemplaza [link de referidos].',
+      'Insiste en que comparta solo su link, nunca "buscalo como Kixly". Si el cliente se registra por su cuenta, se pierde la atribucion y el KOL va a sospechar que le robamos el cliente.',
+      'Mira que copie su link y publique su primer post.',
     ],
     guiones: (a) => {
       const g = [
-        { tipo: 'ENVIAR', titulo: 'Conseguir el link', texto: `Entra a ${C.LINKS.referido}, conecta tu wallet y vas a ver tu link personal de invitacion 🔗\n\nCuando lo compartas, copia SIEMPRE el link COMPLETO. No mandes el codigo por separado ni un link sin codigo: esos registros no te cuentan y es comision perdida.` },
-        { tipo: 'ENVIAR', titulo: 'La atribucion se fija al registrarse', texto: 'Algo antes de que empieces a publicar: un referido se atribuye en el momento en que el cliente SE REGISTRA. El link en el que hizo clic se lo queda, y no se puede cambiar despues.\n\nAsi que comparte solo tu link personal. Nunca digas "busca Kixly y registrate". Si busca y se registra solo, la atribucion se pierde y no la podemos agregar.' },
+        { tipo: 'ENVIAR', titulo: 'Mensaje 26 · Su link de referido', texto: 'Entra a [link de referidos], conecta tu wallet y vas a ver tu link personal de invitación 🔗\nCuando lo compartas, copia SIEMPRE el link COMPLETO. No mandes el código por separado ni un link sin el código.\nEsos registros no se te van a contar, y es comisión que pierdes.' },
       ];
       if (a.modelo === 'ambos') {
-        g.push({ tipo: 'ENVIAR', titulo: 'Un cliente, un camino', texto: 'Algo para que los numeros no se mezclen: no pases al mismo cliente por los dos caminos.\n\nSi apuestas por un cliente en el sistema de agentes Y ademas le mandas tu link y se registra, cuenta como referido y desaparece de tu lado de sistema de agentes. No se paga doble.\n\nTenlo claro: a que clientes les apuesto yo, y a cuales les mando el link.' });
+        g.push({ tipo: 'ENVIAR', titulo: 'Un cliente, un camino', texto: 'Algo para que los números no se mezclen: no pases al mismo cliente por los dos caminos.\nSi apuestas por un cliente en el sistema de agente y además le mandas tu link y se registra, cuenta como referido y desaparece de tu lado del sistema de agente. No se paga doble.\nTenlo claro: a qué clientes les apuesto yo, y a cuáles les mando el link.' });
       }
       return g;
     },
@@ -550,53 +520,61 @@ const PASOS = [
     id: 'm3_sistema',
     fase: 'M3',
     aplica: (a) => a.modelo === 'sistema' || a.modelo === 'ambos',
-    titulo: 'Sistema de agentes funcionando de verdad (no solo "puede entrar")',
+    titulo: 'Sistema de agente funcionando: entrega del paquete para clientes',
     que: [
-      'Funcionando = clientes reales agregados, saldo asignado, primera apuesta real y confirmacion enviada al cliente.',
-      'Dale el paquete de mensajes para clientes: asi nunca piensa que decir.',
-      'Interno: los clientes se van no por perder, sino por no saber cuanto les queda. Que mande el estado semanal.',
+      'Mira que agregue un cliente real, le asigne saldo y haga la primera apuesta.',
+      'Las 10 preguntas de clientes son para que las envie UNA POR UNA, segun lo que pregunte cada cliente. Nunca pegues una tabla en Telegram.',
+      '🔒 Interno: los clientes no se van tanto por perder como por no saber cuanto les queda. Ayudalo a crear el habito del resumen semanal.',
+      'Llegan clientes pero no pagan: el problema no es el producto, le da pena pedir el dinero. Regla: primero cobra y despues carga el saldo.',
     ],
     checklist: [
       'Cliente REAL agregado',
       'Saldo asignado al cliente',
       'Primera apuesta real colocada',
-      'Confirmacion de apuesta enviada al cliente',
+      'Confirmación de apuesta enviada al cliente',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Entrega del paquete de mensajes', texto: 'Te escribi todos los mensajes que necesitas para tus clientes: usalos tal cual y cambia lo que no suene a ti.\n\nCubren casi todas las preguntas que te van a hacer, asi no tienes que pensar cada vez.' },
-      { tipo: 'REENVIAR', titulo: 'Las preguntas que siempre hacen los clientes', texto: 'Me tengo que registrar? No. Solo dime a que apostar, yo tengo el back office.\nTengo que comprar USDT? No. Dame el dinero y yo me encargo.\nComo te pago? Lo que te sea mas facil: transferencia o en persona. Con eso te cargo saldo y apuestas.\nComo se el resultado? Te mando captura al apostar y el resultado al terminar. Preguntame tu saldo cuando quieras.\nComo cobro? Me dices y te pago, cuando quieras. O lo dejas para seguir apostando.' },
-      { tipo: 'REENVIAR', titulo: 'Mas preguntas de clientes', texto: 'Me vas a estafar? Cada apuesta va con captura: hora, momio y monto. Es una casa internacional, no mia, no puedo cambiar los momios. Si dudas, prueba con apuestas chicas.\nA que puedo apostar? Futbol, basquetbol, tenis y esports (LoL, CS, Dota). Previo y en vivo.\nApuesta minima? Tu eliges, puedes empezar con poco.\nPuedo jugar yo? Si, te doy un link: te registras, depositas y retiras tu. Pero necesitas comprar USDT. Si quieres lo facil, yo apuesto por ti.' },
-      { tipo: 'REENVIAR', titulo: 'Confirmacion de apuesta', texto: 'Apuesta colocada ✅\nPartido: [Local vs Visitante]\nPick: [ej. Gana local / Mas de 2.5]\nMonto: [ ] U\nMomio: [ ]\nGanancia posible: [ ] U\nTe mando el resultado cuando salga.' },
-      { tipo: 'REENVIAR', titulo: 'Resultado: gano', texto: 'Ya salio el resultado 🎉\nPartido: [Local vs Visitante] [marcador]\nApostaste: [ ] U\nGanaste: [ ] U\nTu saldo ahora: [ ] U. Apuestas otra o cobras?' },
-      { tipo: 'REENVIAR', titulo: 'Resultado: perdio (mandalo siempre)', texto: 'Partido: [Local vs Visitante] [marcador] (esta no salio)\nTu saldo ahora: [ ] U.\nEl proximo partido de [competencia] se ve buena oportunidad, lo revisamos?' },
-      { tipo: 'REENVIAR', titulo: 'Estado semanal (el mejor habito de retencion)', texto: 'Tu estado de la semana:\nApuestas: [ ]\nApostado: [ ] U\nRetornado: [ ] U\nNeto: [+/- ] U\nSaldo actual: [ ] U. Si algo no cuadra, dime.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 27 · Entrega del paquete para clientes', texto: 'Te escribí todos los mensajes que necesitas para tus clientes. Úsalos tal cual o cambia lo que no suene a ti.\nCubren casi todas las preguntas que te van a hacer, así no tienes que pensar cada vez.' },
+      ...[
+        ['¿Tengo que registrarme?', 'No. Solo dime a qué apostar, yo tengo el back office.'],
+        ['¿Tengo que comprar USDT?', 'No. Me das el dinero y yo me encargo del resto.'],
+        ['¿Cómo te pago?', 'Como te quede más fácil, transferencia o en persona. Cuando lo reciba, te cargo el saldo y puedes apostar.'],
+        ['¿Cómo sé el resultado?', 'Te mando captura cuando apuesto y el resultado después del partido. Puedes preguntarme tu saldo cuando quieras.'],
+        ['¿Cómo cobro lo que gane?', 'Me avisas y te pago cuando quieras. O lo dejas para volver a apostar.'],
+        ['¿Me vas a estafar?', 'Cada apuesta va con captura: hora, cuota y monto. Es una casa internacional, no mía, y no puedo cambiar las cuotas. Si tienes dudas, prueba primero con montos pequeños.'],
+        ['¿A qué puedo apostar?', 'Fútbol (ligas top, Champions, ligas nacionales), básquet (NBA, Europa), tenis y esports (LoL, CS, Dota). Antes del partido y en vivo.'],
+        ['¿Cuál es la apuesta mínima?', 'Tú eliges el monto. Puedes empezar con poco para probar.'],
+        ['¿Puedo jugar yo mismo?', 'Claro, te doy un link: te registras, depositas, apuestas y retiras tú. Pero tendrías que comprar USDT, que es más trabajo. Si quieres lo fácil, apuesto yo por ti.'],
+        ['¿Puedo retirar?', 'Tu dinero está conmigo. Me avisas y te pago, sin pasar por retiros en la plataforma.'],
+      ].map(([q, ans]) => ({ tipo: 'REENVIAR', titulo: `Si el cliente pregunta: ${q}`, texto: ans })),
+      { tipo: 'REENVIAR', titulo: 'Confirmación de apuesta (justo después de apostar)', texto: 'Listo ✅\nPartido: [Local vs Visitante]\nPronóstico: [ej. Gana local / Más de 2.5]\nMonto: [ ] USDT · Cuota: [ ]\nGanancia posible: [ ] USDT\nTe aviso el resultado apenas salga.' },
+      { tipo: 'REENVIAR', titulo: 'Resultado: ganó', texto: '¡Ya salió el resultado! 🎉\nPartido: [Local vs Visitante] [marcador]\nApostaste: [ ] USDT · Ganaste: [ ] USDT\nTu saldo ahora: [ ] USDT. ¿Apostamos otra vez o lo cobras?' },
+      { tipo: 'REENVIAR', titulo: 'Resultado: perdió (envíalo siempre, con un motivo para volver)', texto: 'Partido: [Local vs Visitante] [marcador]. Esta no se dio.\nTu saldo ahora: [ ] USDT.\nEl próximo partido de [competencia] se ve buena oportunidad, ¿le echamos un ojo?' },
+      { tipo: 'REENVIAR', titulo: 'Estado de cuenta semanal (el mejor hábito para retener clientes)', texto: 'Tu resumen de la semana:\nApuestas: [ ] · Apostado: [ ] USDT\nDevuelto: [ ] USDT · Neto: [+/-] USDT\nSaldo actual: [ ] USDT. Si algo no te cuadra, avísame.' },
+      { tipo: 'REENVIAR', titulo: 'Recuperar a un cliente inactivo', texto: 'Hace rato no te veo apostar. Esta semana hay varios partidos de [competencia] con buenas cuotas.\nTodavía tienes [ ] USDT en tu cuenta. Solo avísame.' },
+      { tipo: 'REENVIAR', titulo: 'Aviso de partido grande (úsalo con el calendario)', texto: 'Hoy: [Local] vs [Visitante], [competencia].\n¿Te animas? Dime. Las apuestas abren hasta unos 30 minutos antes del inicio, y también en vivo.' },
     ],
     prueba: { tipo: 'captura', pide: 'Captura de la primera apuesta real de un cliente.' },
   },
   {
     id: 'm3_contenido',
     fase: 'M3',
-    titulo: 'Ensenarle a usar los picks y el calendario de partidos',
+    titulo: 'Contenido diario: canal de picks y calendario',
     que: [
-      'La razon #1 de que caiga el volumen es no tener que publicar. Que no invente contenido.',
-      'Al reenviar picks, siempre: "solo referencia, sin resultados garantizados".',
+      'La razon mas comun por la que baja el volumen de un canal es que no tiene que publicar. No dejes que invente contenido.',
+      'El Mensaje 28 se envia siempre el mismo dia de la semana.',
     ],
     guiones: () => [
-      { tipo: 'REENVIAR', titulo: 'Texto al reenviar un pick', texto: 'Coincido con la lectura de Alice para el partido de hoy, aqui el analisis 👇\n[Pega el post del canal o la captura]\nSi quieres entrarle, escribeme y te lo preparo.\nLos picks son solo referencia, sin resultados garantizados. Juega con responsabilidad, +18.' },
-      { tipo: 'ENVIAR', titulo: 'Calendario semanal (dia fijo)', texto: 'Partidos clave de esta semana:\n· [fecha · competencia · equipos]\n· [fecha · competencia · equipos]\n\nTambien puedes reenviar directo a tu grupo los posts de picks de esta semana. Empuja mas en los dias de partidos grandes: ahi es cuando mejor convierte.' },
-      { tipo: 'REENVIAR', titulo: 'Despertar a un cliente callado', texto: 'Hace rato no te veo apostar. Esta semana hay varios partidos de [competencia], los momios se ven bien.\nTodavia tienes [ ] U en tu cuenta, solo dime.' },
-      { tipo: 'REENVIAR', titulo: 'Partido grande de hoy', texto: 'Hoy: [Local] vs [Visitante], [competencia].\nLe entras? Dime: las apuestas abren hasta unos 30 min antes del inicio, y tambien en vivo.' },
+      { tipo: 'REENVIAR', titulo: 'Texto para reenviar un pick', texto: 'Coincido con el análisis de Alice para el partido de hoy, se los comparto 👇\n[Pega el post del canal o la captura]\nEscríbeme si quieres entrar y te lo preparo.\nLos picks son solo de referencia, no garantizan resultados. Juega con responsabilidad, +18.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 28 · Calendario semanal', texto: 'Partidos clave de esta semana:\n· [fecha · competencia · equipos]\n· [fecha · competencia · equipos]\nTambién puedes reenviar directo a tu grupo los posts del canal de picks de esta semana.\nEmpuja más en los días de partidos grandes, que es cuando más se convierte.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura del calendario o pick enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura del calendario o del pick enviado.' },
   },
   {
     id: 'm3_campana',
     fase: 'M3',
-    titulo: 'Al menos UNA campana o empuje de contenido en su comunidad',
-    que: [
-      'Ayudar no es mandar un link e irte: mira que publique.',
-      'Mejor que "ganancia segura": tasa de acierto real, razones, y atreverse a decir "hoy no hay buena apuesta".',
-    ],
+    titulo: 'Al menos UNA campaña o empuje de contenido en su comunidad',
+    que: ['Ayudar no es mandar un link e irse: mira que publique.'],
     prueba: { tipo: 'captura', pide: 'Captura de la campana o empuje publicado.' },
   },
   {
@@ -604,36 +582,34 @@ const PASOS = [
     fase: 'M3',
     hito: 'M3',
     titulo: '1 cliente ATRIBUIDO con apuesta LIQUIDADA',
-    que: [
-      'No se trata de volumen grande: es la prueba de que este canal entrega personas.',
-      'Una apuesta real de un cliente real vale mas que diez mil seguidores prometidos.',
-      'Plazo de M3: firma + 7 dias.',
-    ],
+    que: ['Es la prueba de que este canal entrega personas. Plazo de M3: firma + 7 dias.'],
     prueba: { tipo: 'captura', pide: 'Captura del ticket liquidado de un cliente atribuido al agente.' },
   },
 
-  // ======================= M4 · COBRA =======================
+  // ======================= M4 · PRIMER PAGO =======================
   {
     id: 'm4_liquidacion',
     fase: 'M4',
-    titulo: 'Mandar el calculo de la primera liquidacion A MANO',
+    titulo: 'Enviar la liquidación con el cálculo hecho a mano (sin esperar a que pregunte)',
     que: [
-      'El portal todavia no muestra el calculo completo: este mensaje evita todas las discusiones.',
-      'Mandalo antes de que pregunte. Si te saltas esto, gastas diez veces mas tiempo explicando.',
-      'Si reclama: pasa a DM, manda el desglose, revisa linea por linea. Nunca discutas en grupo.',
+      'En la primera liquidacion adjunta el calculo a mano: GGR, deducciones, ingreso neto, rate, monto a pagar y el reparto 70/30. Ese mensaje evita casi todas las discusiones.',
+      'Si dice "me pagaron de menos", usa el Mensaje 24. Nunca lo discutas en el grupo: pasalo a mensaje directo. Si algo no se ve en el portal, diselo y mandale el desglose a mano.',
+    ],
+    guiones: () => [
+      { tipo: 'ENVIAR', titulo: 'Mensaje 24 · Si dice "me pagaron de menos"', texto: 'Envíame tu número y cómo lo calculaste, y te paso el desglose completo del periodo para revisarlo línea por línea.\nAhí está todo: la base, el rate, lo que se pagó ahora y lo que pasó a reserva.\nSi nos equivocamos, lo asumo. Si es una diferencia de método, lo alineamos.' },
     ],
     prueba: {
       tipo: 'formulario',
-      pide: 'Captura los numeros del estado de cuenta y te armo el mensaje.',
+      pide: 'Captura los numeros del estado de liquidacion y te armo el Mensaje 23.',
       campos: [
-        { clave: 'ggr', pregunta: 'GGR del periodo (U):', validar: (v) => { const n = numero(v); return n === null ? { ok: false, error: 'Escribe un numero.' } : { ok: true, valor: n }; } },
-        { clave: 'deducciones', pregunta: 'Deducciones del periodo: costos promocionales pagados (U, 0 si no hay):', validar: (v) => { const n = numero(v); return n === null || n < 0 ? { ok: false, error: 'Escribe un numero (0 o mas).' } : { ok: true, valor: n }; } },
-        { clave: 'tendencia', pregunta: 'Volumen contra el periodo anterior (ej. "sube 20%", "igual", "baja 10%", o "primer periodo"):', validar: (v) => (String(v).trim() ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Escribe algo.' }) },
+        { clave: 'ggr', pregunta: 'GGR del periodo (USDT):', validar: (v) => { const n = numero(v); return n === null ? { ok: false, error: 'Escribe un numero.' } : { ok: true, valor: n }; } },
+        { clave: 'deducciones', pregunta: 'Deducciones del periodo: costos promocionales pagados (USDT, 0 si no hay):', validar: (v) => { const n = numero(v); return n === null || n < 0 ? { ok: false, error: 'Escribe un numero (0 o mas).' } : { ok: true, valor: n }; } },
+        { clave: 'tendencia', pregunta: 'Volumen frente al periodo anterior (ej. "subió 20 %", "se mantuvo", "bajó 10 %"):', validar: (v) => (String(v).trim() ? { ok: true, valor: String(v).trim() } : { ok: false, error: 'Escribe algo.' }) },
         {
           clave: 'capturaEnvio',
           tipo: 'foto',
           antes: (a, d) => calculoLiquidacion(a, d),
-          pregunta: 'Manda el mensaje de arriba al agente y luego envia aqui la captura.',
+          pregunta: 'Envia el mensaje de arriba al agente (con el desglose) y luego manda aqui la captura.',
         },
       ],
     },
@@ -641,12 +617,11 @@ const PASOS = [
   {
     id: 'm4_comision',
     fase: 'M4',
-    titulo: 'Comision acreditada en su pagina Commission',
+    titulo: 'Comisión acreditada en su página Commission',
     que: [
-      'Commission: tasa, comision estimada (no final), comision retirable, en retiro, historial.',
-      'El estado de cuenta es el numero final.',
+      'En Commission ve su rate, la comision estimada de la semana (la final es la del estado de liquidacion), la disponible para retirar, la que esta en proceso y el historial con "Request withdrawal".',
     ],
-    prueba: { tipo: 'captura', pide: 'Captura de la pagina Commission con comision retirable.' },
+    prueba: { tipo: 'captura', pide: 'Captura de la pagina Commission con comision disponible para retirar.' },
   },
   {
     id: 'm4_retiro',
@@ -654,12 +629,12 @@ const PASOS = [
     hito: 'M4',
     titulo: 'Un retiro EXITOSO a su propia wallet',
     que: [
-      'M4 es la meta real de todo este proceso. Antes de M4 todo es inversion; despues empieza el retorno.',
-      'Aunque sea poco: solo cuando comprueba que el dinero sale, se atreve a dejar fondos y seguir.',
-      'Comision sin rollover. Aprobacion dentro de 1 dia habil. Que no reenvie la solicitud.',
+      'M4 es la meta real: el KOL confia cuando ve que un numero del back office se convierte en dinero en su wallet.',
+      'Retirar comision no exige volumen minimo; se aprueba en 1 dia habil. Con apuestas abiertas el retirable del pool es menor (es normal). Que no reenvie la solicitud.',
+      'Al cumplirlo: M4 Done en el tracker, Stage = 完成闭环, y pasa a subagentes.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Retira una vez', texto: 'Tu comision ya llego 🎉 Haz una cosa ahora: retira una parte, el monto que quieras.\n\nNo te estoy apurando: es para que compruebes tu mismo una vez que el dinero sale. Despues vas a estar tranquilo dejando fondos y siguiendo.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 29 · Que retire aunque sea poco', texto: '¡Ya te llegó tu comisión! 🎉 Haz algo ahora: retira una parte, el monto que quieras.\nNo es por apurarte. Es para que compruebes tú mismo que el dinero sale de verdad.\nDespués vas a estar tranquilo dejando fondos y siguiendo adelante.' },
     ],
     prueba: { tipo: 'hash', pide: 'Pega el hash on-chain del retiro a su wallet.' },
   },
@@ -669,22 +644,23 @@ const PASOS = [
     id: 'c8_subagentes',
     fase: 'C8',
     ventanaHoras: 24,
-    titulo: 'Hablar de subagentes usando SU propia liquidacion',
+    titulo: 'Subagentes: solo hay una ventana (24 h después de M4)',
     que: [
-      'Unica ventana: 24 h despues de M4. Nunca al firmar.',
-      'SI: "del volumen de tus subagentes, tu tambien recibes una parte".',
-      'NO: cifra de diferencial, "la tasa sube sola", "gana mientras duermes", "ingreso garantizado". El diferencial depende del negocio real y puede ser negativo.',
-      'No cites numero de niveles (pendiente de confirmar).',
+      'Nunca lo menciones el dia de la firma: ahi no sabe si el mismo va a ganar y los subagentes le suenan a reclutar gente.',
+      '🔒 Si: "Del volumen de tus subagentes, tu recibes una parte." NO: cifras de diferencia de rate, "el rate sube automaticamente", "gana mientras duermes", "ingreso garantizado". Pueden ser negativas.',
+      '⚠️ TBC: limite de niveles (3 o sin limite) y si el sistema de diferencia de rate ya funciona. No des numeros.',
+      'Solo para ti: su comision = NGR de sus clientes directos x su rate + NGR de cada subagente x (su rate - rate del subagente). Las perdidas de subagentes tambien cuentan.',
     ],
     guiones: () => [
-      { tipo: 'ENVIAR', titulo: 'Subagentes', texto: 'Acabas de retirar tu primera comision: buen momento para comentarte algo.\n\nSeguro conoces a algunas personas en una situacion parecida a la tuya, con sus propios clientes. Las puedes poner debajo de ti como subagentes: del volumen que hagan, tu tambien recibes una parte.\n\nLos subagentes se agregan con una solicitud a soporte y revision de la plataforma, y quedan bajo tu cuenta. No los puedes agregar tu.\n\nPiensa quien encajaria, dime, y veo como armarlo.' },
+      { tipo: 'ENVIAR', titulo: 'Mensaje 30 · Checklist C8', texto: 'Acabas de retirar tu primera comisión, así que es buen momento para comentarte algo.\nSeguro conoces gente en una situación parecida a la tuya, con sus propios clientes. Puedes ponerlos debajo de ti como subagentes, y del volumen que hagan, tú también recibes una parte.\nLos subagentes se agregan con una solicitud a soporte y una revisión de la plataforma. No los puedes agregar tú directamente.\nPiensa quién podría encajar, me cuentas y vemos cómo armarlo.' },
+      { tipo: 'REENVIAR', titulo: 'Mensaje para reclutar a un subagente', texto: '¡Hola! Estoy trabajando como agente con Kixly, una plataforma cripto de apuestas deportivas y esports (fútbol, básquet, CS2, Dota 2, LoL, antes del partido y en vivo).\nHay dos formas de ganar:\n• Afiliado: compartes tu link y ganas una parte del ingreso neto de los jugadores que traes.\n• Agente: atiendes a tus propios clientes, cargas en USDT, apuestas por ellos y liquidas en local.\nLa comisión es sobre el ingreso neto y se calcula cada semana (70 % semanal, 30 % después). Recibes el cálculo detallado en cada liquidación y una semana negativa se arrastra, nunca pagas de tu bolsillo.\nTambién hay picks diarios en 5 idiomas para compartir con tus clientes.\nSi tienes una comunidad o amigos que siguen deportes, te explico cómo empezar en unos 10 minutos. +18. Aplican restricciones por región.' },
     ],
-    prueba: { tipo: 'captura_o_texto', pide: 'Captura o hora del mensaje enviado.' },
+    prueba: { tipo: 'captura_o_texto', pide: 'Captura o la hora exacta en que enviaste el Mensaje 30.' },
   },
 ];
 
 // ---------------------------------------------------------------------------
-// Calculo de liquidacion (8.5) y guion generado
+// Liquidacion (Mensajes 23 y 19) generada con los numeros reales
 // ---------------------------------------------------------------------------
 
 function redondear(n) { return Math.round(n * 100) / 100; }
@@ -697,43 +673,55 @@ function calcular(ggr, deducciones, tasa) {
 
 function calculoLiquidacion(a, d) {
   const c = calcular(d.ggr, d.deducciones, Number(a.tasa));
-  const interno = {
-    tipo: 'INTERNO', titulo: 'Tu tabla (no se pega en Telegram)',
-    texto: `GGR: ${d.ggr} U\nDeducciones: ${d.deducciones} U\nIngreso neto: ${c.neto} U\nTasa: ${a.tasa}%\nPagable: ${c.pagable} U\nPagado ahora (70%): ${c.ahora} U\nRetenido (30%): ${c.reserva} U`,
+  const desglose = {
+    tipo: 'INTERNO', titulo: 'Cálculo a mano (adjúntalo como desglose, no como tabla en Telegram)',
+    texto: `GGR: ${d.ggr} USDT\nDeducciones (bonos, reembolsos): ${d.deducciones} USDT\nIngreso neto: ${c.neto} USDT\nRate: ${a.tasa} %\nA pagar: ${c.pagable} USDT\nReparto: ${c.ahora} USDT ahora (70 %) · ${c.reserva} USDT en reserva (30 %)`,
   };
   if (c.neto <= 0) {
-    return [interno, {
-      tipo: 'ENVIAR', titulo: 'Periodo negativo (mandalo tu primero)',
-      texto: `Aviso rapido: tu neto de este periodo es negativo, asi que la comision de esta semana es 0.\n\nEl monto es ${Math.abs(c.neto)} U. Se arrastra y se compensa con semanas positivas: no pagas nada. Te mando el desglose.\n\nEs la variacion normal de la que hablamos al inicio. Tu volumen esta creciendo, se va a emparejar en los siguientes periodos.`,
+    return [desglose, {
+      tipo: 'ENVIAR', titulo: 'Mensaje 19 · Periodo negativo (envíalo tú primero)',
+      texto: `Te aviso: tu neto de este periodo salió negativo, así que esta semana la comisión es 0.\nEl monto es de ${Math.abs(c.neto)} USDT. Se arrastra y se compensa con las próximas semanas positivas. Tú no pagas nada.\nEs la variación normal de la que hablamos al inicio. Tu volumen está creciendo y se va a equilibrar. Ahora te mando el desglose.`,
     }];
   }
-  return [interno, {
-    tipo: 'ENVIAR', titulo: 'Liquidacion del periodo',
-    texto: `La liquidacion de este periodo esta lista:\n\nBase de ingreso neto: ${c.neto} U\nTasa: ${a.tasa}%\nPagable: ${c.pagable} U\nPagado ahora: ${c.ahora} U (70%)\nEn reserva: ${c.reserva} U (30%)\n\nTe adjunto el desglose: si algo no cuadra, dime dentro de 3 dias. Tu volumen contra el periodo anterior: ${d.tendencia}.`,
+  return [desglose, {
+    tipo: 'ENVIAR', titulo: 'Mensaje 23 · Liquidación del periodo',
+    texto: `Ya está lista la liquidación de este periodo:\nBase de ingreso neto: ${c.neto} USDT · Rate: ${a.tasa} %\nA pagar: ${c.pagable} USDT\nPagado ahora (70 %): ${c.ahora} USDT · En reserva (30 %): ${c.reserva} USDT\nTe adjunto el desglose. Si algo no te cuadra, avísame en los próximos 3 días. Tu volumen frente al periodo anterior: ${d.tendencia}.`,
   }];
 }
 
 // ---------------------------------------------------------------------------
-// Mantenimiento (seccion 12), solo despues de M4
+// Mantenimiento despues de M4
 // ---------------------------------------------------------------------------
 
 const MANTENIMIENTO_SEMANAL = [
-  'Despues de cada liquidacion, manda el estado PRIMERO (sin que lo pida).',
-  'Una vez por semana: calendario de partidos + picks de la semana.',
+  'Despues de cada liquidacion, envia el Mensaje 23 PRIMERO, sin que lo pida.',
+  'Una vez por semana, el mismo dia: Mensaje 28 (calendario) y los picks de la semana.',
   'Actualiza el tracker todos los dias habiles (Blocker y Next Action).',
 ];
 
 const DIAGNOSTICO = [
-  ['Firmo y nunca entro', 'Olvido, o cree que tiene que esperar', 'm1_listo'],
-  ['Entro y nunca aposto', 'Atorado en "asignar saldo": cree que esta roto. NO preguntes "por que no has apostado?"', 'm2_asignar'],
-  ['Aposto el pero sin clientes', 'Miedo a publicar', 'm3_post'],
-  ['Tenia clientes y se freno', 'Nada que publicar, clientes se enfriaron', 'm3_contenido'],
-  ['Se detuvo de golpe despues de M4', 'Mala experiencia de retiro, o se lo llevaron. Preguntale directo, no adivines', null],
+  ['Firmó y nunca entró', 'Se le olvido o cree que tiene que esperar. Reenvia el Mensaje 5', 'm1_listo'],
+  ['Entró y nunca apostó', 'Se trabo al asignar saldo y cree que el sistema falla. Explicale el paso 4 (Mensaje 14). No le preguntes "¿por que no has apostado?"', 'm2_asignar'],
+  ['Apostó él, pero sin clientes', 'Le da miedo publicar. Escribele el post de lanzamiento (Mensaje 25)', 'm3_post'],
+  ['Tenía clientes y bajó el volumen', 'No tiene que publicar y los clientes se enfriaron. Mandale calendario y picks, y el mensaje para recuperar clientes', 'm3_contenido'],
+  ['Paró de golpe después de M4', 'Mala experiencia al retirar, o se lo llevo otra plataforma. Preguntale directamente, no adivines', null],
 ];
 
-const GUION_REACTIVAR = 'Tu volumen esta un poco mas bajo esta semana: hay algo que te esta frenando, o tus clientes se enfriaron?\n\nSi es que no tienes que publicar, te mando los partidos y picks de esta semana para reenviar. Si es otra cosa, dime y lo resuelvo.';
+const GUION_REACTIVAR = 'Esta semana tu volumen bajó un poco. ¿Algo te está frenando o tus clientes andan quietos?\nSi es que no tienes qué publicar, te mando los partidos y picks de la semana para que los reenvíes. Si es otra cosa, cuéntame y lo resolvemos.';
+
+/**
+ * Regla de Telegram: maximo 6 lineas por mensaje. Si un guion es mas largo,
+ * se parte en mensajes seguidos de hasta 6 lineas.
+ */
+function partirMensaje(texto, max = 6) {
+  const lineas = String(texto).split('\n').filter((l) => l.trim() !== '');
+  if (lineas.length <= max) return [texto];
+  const partes = [];
+  for (let i = 0; i < lineas.length; i += max) partes.push(lineas.slice(i, i + max).join('\n'));
+  return partes;
+}
 
 module.exports = {
   FASES, PASOS, HASH_RE, WALLET_RE, MANTENIMIENTO_SEMANAL, DIAGNOSTICO, GUION_REACTIVAR,
-  calcular, calculoLiquidacion, si, numero,
+  calcular, calculoLiquidacion, si, numero, partirMensaje,
 };

@@ -126,7 +126,16 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
 
   function guionesSalida(a, p) {
     const g = p.guiones ? p.guiones(a) : [];
-    return g.map((x) => msg('', { guion: { tipo: x.tipo, etiqueta: ICONO[x.tipo], titulo: x.titulo, texto: x.texto } }));
+    const out = [];
+    for (const x of g) {
+      // Regla de Telegram: maximo 6 lineas por mensaje para el KOL. Si es mas largo, se parte.
+      const partes = x.tipo === 'INTERNO' ? [x.texto] : P.partirMensaje(x.texto);
+      partes.forEach((texto, i) => {
+        const titulo = partes.length > 1 ? `${x.titulo} (${i + 1}/${partes.length}, envialos seguidos)` : x.titulo;
+        out.push(msg('', { guion: { tipo: x.tipo, etiqueta: ICONO[x.tipo], titulo, texto } }));
+      });
+    }
+    return out;
   }
 
   function agenteActivo(u) {
@@ -237,7 +246,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       'Milestones',
       `M1 ${dia(a.hitos.M1) || '____'} M2 ${dia(a.hitos.M2) || '____'} M3 ${dia(a.hitos.M3) || '____'} M4 ${dia(a.hitos.M4) || '____'}`,
     ].join('\n');
-    return [msg('Copia y pega en el grupo del equipo:'), msg('', { guion: { tipo: 'INTERNO', etiqueta: ICONO.INTERNO, titulo: 'Resumen para el grupo del equipo', texto } })];
+    return [msg('Telegram quick version del checklist: marca cada punto (□ → √) y publicala en el grupo del EQUIPO, nunca en el del KOL.'), msg('', { guion: { tipo: 'INTERNO', etiqueta: ICONO.INTERNO, titulo: 'Resumen para el grupo del equipo', texto } })];
   }
 
   function exportarCsv(bdId) {
@@ -474,7 +483,8 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
         out.push(...guionesSalida(a, p));
       }
     } else {
-      out.push(msg('', { guion: { tipo: 'ENVIAR', etiqueta: ICONO.ENVIAR, titulo: 'Volumen bajo', texto: P.GUION_REACTIVAR } }));
+      out.push(msg('🔒 Interno: nunca preguntes "¿por que no has empezado a promocionar?". Lo pone a la defensiva. Preguntale donde se trabo y dale algo listo.'));
+      out.push(msg('', { guion: { tipo: 'ENVIAR', etiqueta: ICONO.ENVIAR, titulo: 'Mensaje 31 · Reactivación general', texto: P.GUION_REACTIVAR } }));
     }
     return out;
   }
@@ -551,7 +561,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       case 'numeros': return vistaLista('🔢 Cifras clave (memorizalas)', C.NUMEROS);
       case 'links': return [msg([`Sitio: ${C.LINKS.sitio}`, `Portal de agentes: ${C.LINKS.portal}`, `Referidos: ${C.LINKS.referido}`, ...Object.entries(C.LINKS.picks).map(([k, v]) => `Picks ${k}: ${v}`), `Tracker: ${C.LINKS.tracker}`].join('\n'), { titulo: '🔗 Links' })];
       case 'nodecir': return [...vistaLista('🙊 Nunca digas esto', C.NUNCA_DECIR), msg('Lo que dices no se puede retirar: cada frase de estas es un hueco que despues tienes que tapar.')];
-      case 'reglas': return [msg(C.LINEAS_ROJAS.map((x) => `• ${x}`).join('\n'), { titulo: '🚫 Lineas rojas de promocion' }), msg(`Escalar de inmediato:\n${C.ESCALAR_SIEMPRE.map((x, i) => `${i + 1}. ${x}`).join('\n')}\n\nFuera de tu alcance (pasalo, no lo respondas):\n${C.FUERA_DE_ALCANCE.map((x) => `• ${x}`).join('\n')}`)];
+      case 'reglas': return [msg(C.REGLAS_TELEGRAM.map((x) => `• ${x}`).join('\n'), { titulo: '💬 Reglas para los mensajes de Telegram' }), msg(C.LINEAS_ROJAS.map((x) => `• ${x}`).join('\n'), { titulo: '🚫 Lineas rojas de promocion' }), msg(`Escalar de inmediato:\n${C.ESCALAR_SIEMPRE.map((x, i) => `${i + 1}. ${x}`).join('\n')}\n\nFuera de tu alcance (pasalo, no lo respondas):\n${C.FUERA_DE_ALCANCE.map((x) => `• ${x}`).join('\n')}`)];
       case 'tbc': return [...vistaLista('⚠️ Pendientes de confirmar: NO se prometen al agente', C.TBC)];
       case 'calc': {
         const [g, d, t] = (arg || '').split(/\s+/).map(P.numero);

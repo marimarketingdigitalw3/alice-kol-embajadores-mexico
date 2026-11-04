@@ -102,11 +102,11 @@ test('recorrido completo hasta M4 y subagentes, con todos los candados', () => {
 
   const avanzar = (id, fn) => { assert.strictEqual(actual(m).id, id); m.bt('h'); fn(); };
   avanzar('c1_firma', () => m.tx('Respondio 10:32: si, es mi OKX'));
-  avanzar('c1_avisos', () => m.tx('Enviado a las 10:40 por DM'));
-  // C1 exige captura
+  // El mensaje a CS exige captura
   m.bt('h');
   assert.match(m.todo(m.tx('mensaje enviado a CS hoy')), /CAPTURA/);
   m.foto();
+  avanzar('c1_avisos', () => m.tx('Mensaje 3 enviado 10:40 por DM'));
   avanzar('m1_alta', () => m.tx('Stella confirmo 14:00 por DM'));
   avanzar('m1_listo', () => m.tx('Enviado 14:05 por Telegram'));
   avanzar('m1_login', () => m.foto());
@@ -115,7 +115,7 @@ test('recorrido completo hasta M4 y subagentes, con todos los candados', () => {
   // Checklist de materiales obligatorio
   assert.strictEqual(actual(m).id, 'c2_materiales');
   assert.match(m.todo(m.bt('h')), /Faltan estos puntos/);
-  for (let i = 0; i < 6; i += 1) m.bt(`k:${i}`);
+  for (let i = 0; i < 5; i += 1) m.bt(`k:${i}`);
   m.bt('h'); m.foto();
 
   for (const id of ['c3_red', 'c3_regiones', 'c3_retiro', 'm2_apertura']) avanzar(id, () => m.tx('Enviado 15:10 por DM, confirmo leido'));
@@ -145,15 +145,15 @@ test('recorrido completo hasta M4 y subagentes, con todos los candados', () => {
   // Liquidacion: formulario con calculo y captura final
   m.bt('h'); m.tx('1200'); m.tx('200');
   const calc = m.todo(m.tx('primer periodo'));
-  assert.match(calc, /Pagable: 150 U/);
-  assert.match(calc, /Pagado ahora: 105 U/);
+  assert.match(calc, /A pagar: 150 USDT/);
+  assert.match(calc, /Pagado ahora \(70 %\): 105 USDT/);
   assert.match(m.todo(m.tx('ya lo mande')), /captura/);
   m.foto();
   avanzar('m4_comision', () => m.foto());
   avanzar('m4_retiro', () => m.tx(HASH));
   const a = Object.values(m.motor._estado.agentes)[0];
   assert.ok(a.hitos.M4);
-  assert.match(m.todo(m.tx('/subagentes')), /primera comision/);
+  assert.match(m.todo(m.tx('/subagentes')), /primera comisión/);
   avanzar('c8_subagentes', () => m.tx('Enviado 19:00, va a pensar en 2 personas'));
   assert.strictEqual(actual(m), undefined);
   assert.match(m.todo(m.tx('/paso')), /MANTENIMIENTO/);
@@ -204,4 +204,25 @@ test('ningun guion usa raya larga ni promesas prohibidas', () => {
       if (g.tipo !== 'INTERNO') assert.ok(!/garantizad[oa]s?\b(?! )|sin limite|cubrimos tus perdidas/i.test(g.texto.replace(/sin resultados garantizados/i, '')), `promesa prohibida en ${p.id}`);
     }
   }
+});
+
+test('ningun mensaje para el KOL pasa de 6 lineas (los largos se parten)', () => {
+  const a = { modelo: 'ambos', tipoCanal: 'canal', tasa: 20, wallet: WALLET };
+  for (const p of P.PASOS) {
+    for (const g of (p.guiones ? p.guiones(a) : [])) {
+      if (g.tipo === 'INTERNO') continue;
+      for (const parte of P.partirMensaje(g.texto)) {
+        assert.ok(parte.split('\n').filter((l) => l.trim()).length <= 6, `${p.id}: ${g.titulo}`);
+      }
+    }
+  }
+  assert.strictEqual(P.partirMensaje('1\n2\n3\n4\n5\n6\n7\n8').length, 2);
+});
+
+test('el orden del dia de firma es: datos, firma, CS, advertencias', () => {
+  const ids = P.PASOS.map((p) => p.id);
+  assert.ok(ids.indexOf('c1_datos') < ids.indexOf('c1_firma'));
+  assert.ok(ids.indexOf('c1_firma') < ids.indexOf('c1_cs'));
+  assert.ok(ids.indexOf('c1_cs') < ids.indexOf('c1_avisos'));
+  assert.match(P.PASOS.find((p) => p.id === 'c1_datos').guiones({})[0].texto, /escribe "platform"/);
 });

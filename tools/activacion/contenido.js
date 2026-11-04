@@ -112,15 +112,15 @@ const BLOQUEOS = {
     ['Datos de alta incompletos', 'Es responsabilidad tuya: pide los 4 datos en un solo mensaje.'],
   ],
   M2: [
-    ['No quiere depositar ni apostar con su dinero', 'Usa el guion de apertura del recorrido (apostar 10 U el mismo). Vale la pena insistir: es la accion de mayor impacto.'],
-    ['"Deposite pero no puedo apostar"', 'Primero pregunta: asignaste saldo al cliente? 8 de cada 10 veces es eso (paso 4). Usa el guion "deposite pero no puedo apostar".'],
+    ['"Primero quiero mirar" / "voy a publicar en el grupo a ver quien se apunta"', 'Vuelve a enviar el Mensaje 11. Vale la pena insistir: es la accion con mas impacto de todo el proceso.'],
+    ['"Deposite pero no puedo apostar"', 'Preguntale si le asigno saldo al cliente. En 8 de cada 10 casos ese es el problema (paso 4, Mensaje 14).'],
     ['El cliente tiene saldo y aun asi no puede apostar', 'Revisa en orden: estado del cliente normal, saldo del cliente, pool real del agente. Si todo bien, escala con captura.'],
     ['El deposito no llega', 'On-chain tarda segundos: que refresque. Revisa red, minimo 10 U, direccion. Pide el hash. Que NO mande otro deposito de prueba. Si pasan minutos, escala con el hash.'],
     ['El sistema bloquea la apuesta', 'Registra datos de la apuesta y el error exacto y escala. No dejes que el agente adivine la causa.'],
     ['Importacion masiva fallo en parte', 'Reimportar solo las filas fallidas.'],
     ['Confundido entre los dos caminos', 'Repite la frase de una linea (seccion 2.2). No le des los dos manuales a la vez.'],
     ['"El sistema esta roto?"', 'Pide el texto exacto + captura. Que no siga haciendo clic ni cambie de wallet. Usa el guion "el sistema esta roto".'],
-    ['Los numeros del pool no cuadran', 'Pool real = saldo sin asignar + suma de saldos de clientes. Si no cuadra: ESCALA DE INMEDIATO (descuadre de fondos).'],
+    ['Los numeros no cuadran con la formula', 'Escalalo de inmediato y dile que deje de probar botones. Es un descuadre de fondos, uno de los 5 casos que siempre se escalan.'],
   ],
   M3: [
     ['Tiene miedo de publicar en su canal', 'Dale el post de lanzamiento ya escrito, version segun su tipo de canal. Que empiece por contenido de partidos o su experiencia real.'],
@@ -131,11 +131,11 @@ const BLOQUEOS = {
     ['"Tienen una lista de clientes para escribirles?"', 'No tenemos. Sugiere: link en sus grupos, canales de picks, reclutar subagentes.'],
   ],
   M4: [
-    ['Multiplica GGR u Overview por su tasa y le da mas', 'La comision es sobre ingreso neto y Overview no es la base. Manda el calculo a mano (paso de liquidacion).'],
+    ['Multiplica GGR u Overview por su rate y le da mas', 'La comision se calcula sobre el ingreso neto y Overview no es la base. Mandale el calculo a mano (Mensaje 23).'],
     ['Esperando un retiro', 'Comision sin requisito de rollover; aprobacion dentro de 1 dia habil. Con apuestas abiertas el retirable del pool baja (es normal). Que no reenvie la solicitud.'],
     ['Le llego comision y no retira', 'Haz que retire una vez, aunque sea poco.'],
-    ['"Por que solo me pagaron 70%?"', '70/30: recibe el total en dos partes.'],
-    ['Comision 0 o negativa', 'Vacuna 1. Manda el desglose; nunca solo "es normal". Nunca prometer "los agentes siempre ganan".'],
+    ['"Por que solo me pagaron el 70 %?"', 'Recibe el monto completo, pero en dos partes (Mensaje 20).'],
+    ['Comision 0 o negativa', 'Vacuna 1 (Mensajes 18 y 19). Mandale el desglose. Nunca digas solo "es normal" ni prometas que "los agentes siempre ganan".'],
     ['Debajo del minimo de retiro', 'Pasa a la semana siguiente (el minimo exacto esta pendiente de confirmar: no lo cites).'],
     ['Problemas con la direccion de retiro', 'Solo direccion externa en la red correcta. Cambiar direccion de pago va por finanzas / proceso especial de BD.'],
   ],
@@ -252,6 +252,16 @@ const LINEAS_ROJAS = [
   'Presentalo como "estas reglas protegen tu comision de un clawback", no como "cumplimiento exige".',
 ];
 
+// Reglas para los mensajes que se mandan por Telegram.
+const REGLAS_TELEGRAM = [
+  'Maximo 6 lineas por mensaje. Si es mas largo, dividelo en dos y envialos seguidos (el bot ya los parte solo).',
+  'Nunca pegues tablas en Telegram. Las tablas son para ti.',
+  'No hables de soluciones alternativas para regiones restringidas en el grupo. Esos casos se escalan a Stella.',
+  'La "Telegram quick version" del checklist (/resumen) se publica en el grupo del EQUIPO, no en el del KOL.',
+  'Solo cuenta lo verificable en el sistema: login, ticket liquidado, ticket liquidado de un cliente atribuido, retiro on-chain. "Me dijo que lo hizo" no cuenta.',
+  'Anota la hora en que enviaste cada mensaje como prueba. Sin prueba, el punto cuenta como no hecho.',
+];
+
 // Lo que hay que escalar de inmediato (13.4).
 const ESCALAR_SIEMPRE = [
   'El book no soporta el idioma objetivo',
@@ -286,6 +296,6 @@ const TBC = [
 
 module.exports = {
   LINKS, NUMEROS, REGIONES_RESTRINGIDAS, REGIONES_CHINA, TIPOS_CANAL, MODELOS,
-  BLOQUEOS, FAQ, FAQ_BD, NUNCA_DECIR, LINEAS_ROJAS, ESCALAR_SIEMPRE, FUERA_DE_ALCANCE, TBC,
+  BLOQUEOS, FAQ, FAQ_BD, REGLAS_TELEGRAM, NUNCA_DECIR, LINEAS_ROJAS, ESCALAR_SIEMPRE, FUERA_DE_ALCANCE, TBC,
   normalizar, revisarRegiones, recomendacionRuta,
 };
