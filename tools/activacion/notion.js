@@ -188,8 +188,8 @@ function camposDD(lineas) {
       if (cel.length === 3) for (const [re, k, kc] of FILAS_3) if (re.test(et)) { poner(k, cel[1]); poner(kc, cel[2]); }
       if (cel.length >= 4) for (const [re, b] of FILAS_4) if (re.test(et)) { poner(`${b}Dice`, cel[1]); poner(`${b}Verif`, cel[2]); poner(`${b}Metodo`, cel[3]); }
     } else {
-      const m = limpio(l).match(/^(Primary channels selected[^:]*|Reason for selection|Bottom line)\s*:\s*(.+)$/i);
-      if (m) poner(/primary/i.test(m[1]) ? 'principales' : /reason/i.test(m[1]) ? 'razonPrincipales' : 'conclusion', m[2]);
+      const m = limpio(l).match(/^(Reason for selection|Bottom line)\s*:\s*(.+)$/i);
+      if (m) poner(/reason/i.test(m[1]) ? 'razonPrincipales' : 'conclusion', m[2]);
     }
   }
   derivados(lineas, c);
@@ -219,7 +219,8 @@ function derivados(lineas, c) {
     const cinco = l.match(/^Five numbers[^:]*:\s*(.*)$/i);
     if (cinco) {
       const partes = cinco[1].split(';').map((x) => x.trim());
-      ['mensajes', 'personas', 'top5', 'boletos', 'menciones'].forEach((k, i) => { if (partes[i]) poner(k, numero(partes[i])); });
+      const valor = (t) => (t.includes(':') ? t.split(':').slice(1).join(':') : t).split(/\.\s+(?=[A-Z])/)[0];
+      ['mensajes', 'personas', 'top5', 'boletos', 'menciones'].forEach((k, i) => { if (partes[i]) poner(k, numero(valor(partes[i]))); });
       continue;
     }
     const veto = l.match(/^Veto check[^:]*:\s*(.*)$/i);
@@ -250,6 +251,17 @@ function derivados(lineas, c) {
       poner('tipoGrupo', k);
       continue;
     }
+    const prim = l.match(/^Primary channels selected[^:]*:\s*(.*?)(?:\s*Reason for selection:\s*(.*))?$/i);
+    if (prim) { poner('principales', prim[1].replace(/\.\s*$/, '')); poner('razonPrincipales', prim[2]); continue; }
+    const canal1 = l.match(/^Channel\s*(?:①|1)\s*:\s*(.*)$/i);
+    if (canal1) {
+      poner('dcNombre', canal1[1]);
+      poner('dcTipo', /view counter|\bchannel\b/i.test(canal1[1]) ? 'canal' : /\bgroup\b/i.test(canal1[1]) ? 'grupo' : null);
+      poner('dcPublico', /\bprivate|invite/i.test(canal1[1]) ? 'no' : /\bpublic\b/i.test(canal1[1]) ? 'si' : null);
+      continue;
+    }
+    if (/☑\s*Telegram channel/i.test(l)) poner('tipoCanal', 'canal');
+    else if (/☑\s*Telegram group/i.test(l)) poner('tipoCanal', 'grupo');
     const roles = l.match(/^Roles:\s*(.*)$/i);
     if (roles) { poner('personasClave', roles[1]); continue; }
     const comp = l.match(/^Competitors[^:]*:\s*(.*?)(?:\.\s*Player complaints[^:]*:\s*(.*))?$/i);
@@ -261,8 +273,15 @@ function derivados(lineas, c) {
     if (cel.length === 2 && /^publicly verifiable/i.test(cel[0])) poner('dcPublico', /(☑|✅|\[x\])\s*public/i.test(cel[1]) ? 'si' : /(☑|✅|\[x\])\s*private/i.test(cel[1]) ? 'no' : null);
   }
   if (inventario.length) poner('inventario', inventario.join('\n'));
+  // El texto que sigue al titulo "Summary" es el resumen final del DD.
+  const iSum = lineas.findIndex((x) => /^summary$/i.test(limpio(x)));
+  if (iSum >= 0) {
+    const sig = lineas.slice(iSum + 1).find((x) => limpio(x));
+    if (sig && !/^appendix/i.test(limpio(sig))) poner('resumen', limpio(sig));
+  }
   // Prueba de 2 minutos del paso "Entrar al grupo": sale del mismo scorecard.
-  if (c.scA) poner('t2Partidos', c.scA);
+  // "Hablan de partidos, momios y apuestas?" es sobre el contenido: basta con que se hable de apuestas (A, B o C).
+  if (c.scA || c.scB || c.scC) poner('t2Partidos', [c.scA, c.scB, c.scC].includes('si') ? 'si' : 'no');
   if (c.scD) poner('t2Boletos', c.scD);
   if (c.scE) poner('t2Owner', c.scE);
 }

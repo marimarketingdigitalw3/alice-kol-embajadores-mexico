@@ -114,7 +114,7 @@ test('saca del texto libre del DD el scorecard, los cinco numeros, vetos y prueb
   assert.deepStrictEqual([c.mensajes, c.personas, c.top5, c.boletos, c.menciones], ['64', '11', '55', '3', '2']);
   assert.deepStrictEqual([c.vetoRegion, c.vetoMenores, c.vetoEstafa, c.vetoSoloAdmins, c.vetoAyuda], ['no', 'no', 'no', 'no', 'no']);
   assert.strictEqual(c.tipoGrupo, 'tipster');
-  assert.strictEqual(c.t2Partidos, 'si');
+  assert.strictEqual(c.t2Partidos, 'si'); // A dice si
   assert.strictEqual(c.t2Boletos, 'no');
   assert.match(c.inventario, /TG Bets · https:\/\/t\.me\/tgbets/);
 });

@@ -393,6 +393,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     e.datos[c.clave] = res.valor;
     e.i += 1;
     guardar();
+    if (e.auto) return avanzarConNotion(u, a, campos);
     const sig = preguntar(u, a, campos);
     if (sig) return sig;
     return terminarFormulario(u, e);
@@ -715,6 +716,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       const a = agenteActivo(u) || {};
       const campos = camposDe(u.esperando);
       if (d === 'nrev') return preguntar(u, a, campos);
+      u.esperando.auto = true; // despues de cada respuesta manual, sigue llenando con el DD
       return avanzarConNotion(u, a, campos);
     }
     if (d === 'nt') {
