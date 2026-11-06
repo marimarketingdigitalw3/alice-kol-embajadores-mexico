@@ -294,8 +294,63 @@ const TBC = [
   ['Dia de liquidacion', 'Semanal; "lunes noche UTC+8" pendiente.'],
 ];
 
+/** Cuestionario para calificar al KOL (se envia por Telegram; sus respuestas van al DD palabra por palabra). */
+const PREGUNTAS_KOL = [
+  { tipo: 'ENVIAR', titulo: 'Introduccion', texto: '¡Hola! Para avanzar internamente con la propuesta y ver cómo podríamos armar la colaboración, me gustaría conocer un poco más sobre tu comunidad y tu experiencia.' },
+  { tipo: 'ENVIAR', titulo: '1. Datos de contacto', texto: [
+    '1. Datos de contacto',
+    '1. Además de Telegram, ¿tienes WhatsApp o un correo donde podamos contactarte?',
+    '2. ¿Desde qué país operas?',
+    '3. ¿Tienes alguna relación personal o laboral con alguien del equipo de Alice?',
+  ].join('\n') },
+  { tipo: 'ENVIAR', titulo: '2. Experiencia y alianzas actuales', texto: [
+    '2. Experiencia y alianzas actuales',
+    '1. ¿Con qué casas de apuestas, casinos o plataformas trabajas actualmente?',
+    '2. ¿Con cuáles has trabajado antes y durante cuánto tiempo?',
+    '3. ¿Qué modelo usas o has usado: CPA, revenue share, fee fijo o híbrido?',
+    '4. ¿Cuál es tu comisión o tarifa actual y cómo te pagan (frecuencia y método)?',
+    '5. ¿Te descuentan algo de la comisión (bonos, costos de plataforma, chargebacks, etc.)?',
+    '6. ¿Qué resultados genera tu canal en registros y depositantes? Un número aproximado por mes nos ayuda mucho.',
+    '7. ¿Podrías compartir una captura de tu panel de afiliado? Puedes ocultar la información sensible.',
+    '8. ¿Tienes subagentes o personas que promocionan bajo tu código? ¿Cuántos, aproximadamente?',
+  ].join('\n') },
+  { tipo: 'ENVIAR', titulo: '3. Canales', texto: [
+    '3. Canales',
+    '1. ¿Me compartes los links de todos tus canales, grupos y redes (Telegram, WhatsApp, X, Instagram, TikTok, YouTube, Discord, etc.) con su número actual de miembros o seguidores?',
+    '2. ¿Cuáles son tus 2 o 3 canales principales?',
+    '3. Si tienes grupos privados, ¿podrías darnos acceso temporal o una captura del número de miembros y de los usuarios en línea?',
+    '4. ¿Tienes métricas de crecimiento de los últimos 6 meses? Una captura de Telegram Statistics, TGStat o Telemetr sería ideal.',
+    '5. ¿Puedes enviarnos capturas de tus últimas 10 publicaciones donde se vean las vistas?',
+    '6. ¿Cuántas publicaciones haces por semana, más o menos?',
+    '7. ¿El canal ha cambiado de nombre o de temática en algún momento?',
+    '8. Si notamos un crecimiento fuerte reciente, ¿a qué se debe (campaña, colaboración, temporada deportiva)?',
+  ].join('\n') },
+  { tipo: 'ENVIAR', titulo: '4. Audiencia', texto: [
+    '4. Audiencia',
+    '1. ¿De qué países viene principalmente tu audiencia?',
+    '2. ¿Qué porcentaje aproximado es de México y del resto de LATAM?',
+    '3. ¿Cuál es el rango de edad principal (menores de 30, 30 a 40, más de 40)?',
+    '4. ¿Tu audiencia se enfoca más en apuestas deportivas, casino o ambos?',
+    '5. ¿Qué deportes o ligas siguen más?',
+    '6. ¿Cuántos apostadores activos al mes estimas que tienes?',
+    '7. ¿Cuál es el monto promedio que suelen apostar por jugada?',
+    '8. ¿En qué plataformas apuestan hoy tus seguidores?',
+    '9. ¿Te molestaría si hacemos una encuesta en tu canal o grupo para conocer la edad y el monto promedio de apuesta?',
+  ].join('\n') },
+  { tipo: 'ENVIAR', titulo: '5. Propuesta de colaboración', texto: [
+    '5. Propuesta de colaboración',
+    '1. ¿Qué tarifa mensual propones y qué incluye exactamente? Por ejemplo: número de posts o picks por semana, menciones, contenido dedicado, posts fijados, link de referido.',
+    '2. ¿En qué canales se publicaría el contenido?',
+    '3. ¿Estarías abierto a usar un link de seguimiento para medir registros y depósitos?',
+    '4. ¿Te interesaría pasar a un modelo híbrido (fee fijo más CPA por depositante) una vez tengamos datos reales?',
+    '5. ¿Estarías dispuesto a hacer una prueba inicial de 1 a 2 meses y luego evaluar resultados?',
+    '6. ¿Tienes algún acuerdo de exclusividad vigente con otra plataforma?',
+  ].join('\n') },
+  { tipo: 'INTERNO', titulo: 'Lo que no se le pregunta al KOL (lo verificas tú)', texto: 'Fuente del lead, quién lo proveyó, fecha del primer contacto, promedio de vistas y tasa de vistas calculada, links de promoción de otras casas en su historial, bot spam en grupos y el conteo de montos en los tickets que publica.\n\nEl formulario exige verificar por cuenta propia todo lo que él declare. Sus respuestas van al DD palabra por palabra en español, marcadas como "KOL claim".' },
+];
+
 module.exports = {
   LINKS, NUMEROS, REGIONES_RESTRINGIDAS, REGIONES_CHINA, TIPOS_CANAL, MODELOS,
   BLOQUEOS, FAQ, FAQ_BD, REGLAS_TELEGRAM, NUNCA_DECIR, LINEAS_ROJAS, ESCALAR_SIEMPRE, FUERA_DE_ALCANCE, TBC,
-  normalizar, revisarRegiones, recomendacionRuta,
+  normalizar, revisarRegiones, recomendacionRuta, PREGUNTAS_KOL,
 };

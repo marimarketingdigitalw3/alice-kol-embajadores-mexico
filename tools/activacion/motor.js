@@ -239,7 +239,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     };
     botones.push([{ t: ETIQUETA_HECHO[p.prueba.tipo] || '✅ Marcar hecho', d: 'h' }]);
     botones.push([...(p.guiones ? [{ t: '📤 Guiones', d: 'g' }] : []), { t: '🚧 Bloqueos', d: 'b' }, { t: '❓ FAQ', d: 'f' }]);
-    botones.push([{ t: '📥 Traer datos de Notion', d: 'notion' }]);
+    botones.push([{ t: '📥 Traer datos de Notion', d: 'notion' }, ...(F.id === 'calificacion' ? [{ t: '❓ Preguntas al KOL', d: 'pq' }] : [])]);
 
     const out = [msg(lineas.join('\n'), { titulo: `${a.nombre} · ${p.titulo}`, botones })];
     if (conGuiones) out.push(...guionesSalida(a, p));
@@ -671,6 +671,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       '/nodecir · lo que nunca se dice · /reglas · lineas rojas',
       '/tbc · puntos pendientes de confirmar (no se prometen)',
       '/pendientes · lo que no deja avanzar en cada expediente',
+      '/preguntas · cuestionario para calificar al KOL',
       '',
       '/detener motivo · /reanudar · /cancelar',
     ].join('\n'), { titulo: '🤖 Agente de activacion de canales' })];
@@ -698,6 +699,15 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
         return [msg(F.textoNuevo || 'Vamos a registrar una firma. Todo lo de hoy se hace HOY: fila en el tracker y alta enviada a CS.', { titulo: '🆕 Nuevo' }), ...preguntar(u, {}, F.CAMPOS_NUEVO)];
       case 'agentes': return vistaAgentes(u);
       case 'pendientes': return vistaPendientes(u);
+      case 'preguntas': {
+        const a = agenteActivo(u);
+        const out = [msg(`Envíalas por Telegram en este orden, una sección por mensaje${a ? ` (expediente: ${a.nombre})` : ''}. Sus respuestas van al DD palabra por palabra; lo que declare se verifica por tu cuenta.`, { titulo: '❓ Preguntas para calificar al KOL' })];
+        for (const x of C.PREGUNTAS_KOL) {
+          const partes = x.tipo === 'INTERNO' ? [x.texto] : P.partirMensaje(x.texto);
+          partes.forEach((texto, i) => out.push(msg('', { guion: { tipo: x.tipo, etiqueta: ICONO[x.tipo], titulo: partes.length > 1 ? `${x.titulo} (${i + 1}/${partes.length}, envialos seguidos)` : x.titulo, texto } })));
+        }
+        return out;
+      }
       case 'usar': {
         const a = estado.agentes[arg];
         if (!a || String(a.bdId) !== String(uid)) return [msg('Ese agente no existe o no es tuyo.')];
@@ -805,6 +815,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
     if (d.startsWith('rx:')) return vistaReactivar(a, d.slice(3));
     if (d === 'g') return comando(u, uid, 'guiones');
     if (d === 'p') return comando(u, uid, 'paso');
+    if (d === 'pq') return comando(u, uid, 'preguntas');
     if (d === 'notion') return [msg('Buscando en Notion... (si no responde, usa /notion)')];
     if (d === 'b') return vistaBloqueos(a);
     if (d.startsWith('b:')) return vistaBloqueos(a, d.slice(2));
