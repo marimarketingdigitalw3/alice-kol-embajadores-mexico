@@ -143,6 +143,64 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
   }
 
   // -------------------------------------------------------------- vistas
+  /**
+   * Lo que todavia impide avanzar al siguiente paso: bloqueo, checklist sin marcar, preguntas sin
+   * respuesta o datos del DD que no pasan la validacion, y la prueba que falta.
+   */
+  function pendientesPaso(a, p = pasoActual(a)) {
+    if (!p) return [];
+    const out = [];
+    if (a.bloqueo) out.push(`🔒 Bloqueo: ${a.bloqueo}`);
+    if (p.checklist) {
+      const hechos = a.checks[p.id] || [];
+      p.checklist.forEach((item, i) => { if (!hechos.includes(i)) out.push(`☐ ${item}`); });
+    }
+    if (p.prueba.tipo !== 'formulario') {
+      out.push(`📎 Falta la prueba: ${p.prueba.pide}`);
+      return out;
+    }
+    const ctx = { ...a };
+    let sinDato = 0;
+    for (const c of p.prueba.campos) {
+      if (c.aplica && !c.aplica(ctx)) continue;
+      const titulo = c.pregunta.split('\n')[0].replace(/[:?]\s*$/, '');
+      if (c.tipo === 'foto') { out.push(`📸 Falta la captura: ${titulo}`); continue; }
+      const v = a.notion && a.notion[c.clave];
+      if (v === undefined || v === null || String(v).trim() === '' || (c.opciones && !c.opciones.some(([k]) => k === v))) {
+        sinDato += 1;
+        if (a.notion) out.push(`❓ Sin dato en el DD: ${titulo}`);
+        continue;
+      }
+      const r = c.validar(String(v), ctx, ahora());
+      if (!r.ok) out.push(`${r.bloquear ? '⛔ Bloquea' : '⚠️ El DD no alcanza'}: ${titulo} (${String(r.error).replace(/^[^\wÀ-ÿ"¿]+/, '').slice(0, 120)})`);
+      else ctx[c.clave] = r.valor;
+    }
+    if (!a.notion && sinDato) out.push(`📝 Faltan ${sinDato} respuestas de este paso (toca "Responder las preguntas" o trae el DD con /notion).`);
+    return out;
+  }
+
+  function vistaPendientes(u) {
+    const mios = Object.values(estado.agentes).filter((x) => String(x.bdId) === String(u.id) && x.estado !== 'cerrado');
+    if (!mios.length) return [msg(F.textoSinExpedientes || 'No tienes expedientes abiertos.', { titulo: '🚧 Pendientes' })];
+    return mios.map((x) => {
+      const p = pasoActual(x);
+      const lista = pendientesPaso(x, p);
+      // Bloqueos que el DD ya anticipa en los pasos siguientes (vetos, minimos que no se cumplen).
+      const pasos = pasosDe(x);
+      const adelante = [];
+      for (const q of pasos.slice(pasos.indexOf(p) + 1)) {
+        for (const linea of pendientesPaso({ ...x, bloqueo: '' }, q)) if (/^⛔/.test(linea)) adelante.push(`${q.titulo}: ${linea.replace(/^⛔ Bloquea: /, '')}`);
+      }
+      return msg([
+        `Paso actual: ${p ? p.titulo : 'ninguno'}`,
+        '',
+        ...(lista.length ? lista.slice(0, 12) : ['Nada pendiente: puedes marcar este paso.']),
+        ...(lista.length > 12 ? [`… y ${lista.length - 12} mas`] : []),
+        ...(adelante.length ? ['', '⛔ Mas adelante, segun el DD, esto va a bloquear:', ...adelante.slice(0, 6).map((t) => `• ${t}`)] : []),
+      ].join('\n'), { titulo: `🚧 ${x.nombre} (#${x.id})`, botones: [[{ t: '▶ Ir a este expediente', d: `a:${x.id}` }]] });
+    });
+  }
+
   function mostrarPaso(a, { conGuiones = true } = {}) {
     if (a.estado === 'detenido') return [msg(`⛔ ${a.nombre} esta detenido (中止合作). Usa /reanudar si vuelve la cooperacion.`)];
     const p = pasoActual(a);
@@ -161,7 +219,11 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       lineas.push('', `Checklist (${hechos.length}/${p.checklist.length}). Marca cada uno antes de subir la prueba.`);
     }
     lineas.push('', `🔐 Para avanzar: ${p.prueba.pide}${p.prueba.tipo === 'formulario' ? ' Toca "Responder las preguntas" y te las hago una por una.' : ''}`);
-    if (a.bloqueo) lineas.push('', `🚧 Bloqueo actual: ${a.bloqueo}`);
+    const pend = pendientesPaso(a, p);
+    if (pend.length) {
+      lineas.push('', '🚧 Pendientes que no dejan avanzar:', ...pend.slice(0, 8));
+      if (pend.length > 8) lineas.push(`… y ${pend.length - 8} mas (/pendientes)`);
+    }
 
     const botones = [];
     if (p.checklist) {
@@ -608,6 +670,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       '/numeros · cifras clave · /links · links clave',
       '/nodecir · lo que nunca se dice · /reglas · lineas rojas',
       '/tbc · puntos pendientes de confirmar (no se prometen)',
+      '/pendientes · lo que no deja avanzar en cada expediente',
       '',
       '/detener motivo · /reanudar · /cancelar',
     ].join('\n'), { titulo: '🤖 Agente de activacion de canales' })];
@@ -634,6 +697,7 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
         guardar();
         return [msg(F.textoNuevo || 'Vamos a registrar una firma. Todo lo de hoy se hace HOY: fila en el tracker y alta enviada a CS.', { titulo: '🆕 Nuevo' }), ...preguntar(u, {}, F.CAMPOS_NUEVO)];
       case 'agentes': return vistaAgentes(u);
+      case 'pendientes': return vistaPendientes(u);
       case 'usar': {
         const a = estado.agentes[arg];
         if (!a || String(a.bdId) !== String(uid)) return [msg('Ese agente no existe o no es tuyo.')];

@@ -118,3 +118,17 @@ test('saca del texto libre del DD el scorecard, los cinco numeros, vetos y prueb
   assert.strictEqual(c.t2Boletos, 'no');
   assert.match(c.inventario, /TG Bets · https:\/\/t\.me\/tgbets/);
 });
+
+test('/pendientes muestra lo que falta en el paso y los bloqueos que el DD anticipa', () => {
+  const oficina = crearOficina({ stores: { oficina: storeMemoria(), activacion: storeMemoria(), calificacion: storeMemoria() } });
+  const u = { id: 7, nombre: 'Maria' };
+  oficina.recibir({ usuario: u, texto: '/calificacion' });
+  oficina.motores.c.importar(u, { nombre: 'Tomas Guiral' });
+  oficina.motores.c.aplicarNotion(u, { dd: { titulo: 'x' }, campos: { fuente: 'Instagram DM, 2 Oct', proveedor: 'Juanes', negociador: 'Maria', vetoSoloAdmins: 'si' } });
+  const t = oficina.recibir({ usuario: u, texto: '/pendientes' }).map((s) => s.texto).join('\n');
+  assert.match(t, /Sin dato en el DD: Fecha y forma del primer contacto/);
+  assert.match(t, /Mas adelante, segun el DD, esto va a bloquear/);
+  assert.match(t, /Solo publican admins o bots/);
+  const paso = oficina.recibir({ usuario: u, texto: '/paso' }).find((s) => s.botones);
+  assert.match(paso.texto, /Pendientes que no dejan avanzar/);
+});
