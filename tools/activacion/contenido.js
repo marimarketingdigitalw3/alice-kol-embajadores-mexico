@@ -346,7 +346,6 @@ const PREGUNTAS_KOL = [
     '5. ¿Estarías dispuesto a hacer una prueba inicial de 1 a 2 meses y luego evaluar resultados?',
     '6. ¿Tienes algún acuerdo de exclusividad vigente con otra plataforma?',
   ].join('\n') },
-  { tipo: 'INTERNO', titulo: 'Lo que no se le pregunta al KOL (lo verificas tú)', texto: 'Fuente del lead, quién lo proveyó, fecha del primer contacto, promedio de vistas y tasa de vistas calculada, links de promoción de otras casas en su historial, bot spam en grupos y el conteo de montos en los tickets que publica.\n\nEl formulario exige verificar por cuenta propia todo lo que él declare. Sus respuestas van al DD palabra por palabra en español, marcadas como "KOL claim".' },
 ];
 
 module.exports = {

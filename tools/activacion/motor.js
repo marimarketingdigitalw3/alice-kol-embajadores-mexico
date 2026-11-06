@@ -701,12 +701,11 @@ function crearMotor({ store, permitidos = [], ahora = () => new Date(), flujo = 
       case 'pendientes': return vistaPendientes(u);
       case 'preguntas': {
         const a = agenteActivo(u);
-        const out = [msg(`Envíalas por Telegram en este orden, una sección por mensaje${a ? ` (expediente: ${a.nombre})` : ''}. Sus respuestas van al DD palabra por palabra; lo que declare se verifica por tu cuenta.`, { titulo: '❓ Preguntas para calificar al KOL' })];
-        for (const x of C.PREGUNTAS_KOL) {
-          const partes = x.tipo === 'INTERNO' ? [x.texto] : P.partirMensaje(x.texto);
-          partes.forEach((texto, i) => out.push(msg('', { guion: { tipo: x.tipo, etiqueta: ICONO[x.tipo], titulo: partes.length > 1 ? `${x.titulo} (${i + 1}/${partes.length}, envialos seguidos)` : x.titulo, texto } })));
-        }
-        return out;
+        const texto = C.PREGUNTAS_KOL.filter((x) => x.tipo === 'ENVIAR').map((x) => x.texto).join('\n\n');
+        return [
+          msg(`Copia y envía este mensaje completo al KOL${a ? ` (expediente: ${a.nombre})` : ''}.`, { titulo: '❓ Preguntas para calificar al KOL' }),
+          msg('', { guion: { tipo: 'ENVIAR', etiqueta: ICONO.ENVIAR, titulo: 'Todas las preguntas en un solo mensaje', texto } }),
+        ];
       }
       case 'usar': {
         const a = estado.agentes[arg];

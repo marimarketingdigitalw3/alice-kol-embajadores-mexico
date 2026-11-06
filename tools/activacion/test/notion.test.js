@@ -133,7 +133,7 @@ test('/pendientes muestra lo que falta en el paso y los bloqueos que el DD antic
   assert.match(paso.texto, /Pendientes que no dejan avanzar/);
 });
 
-test('/preguntas entrega el cuestionario al KOL en mensajes de maximo 6 lineas y la nota interna', () => {
+test('/preguntas entrega todo el cuestionario al KOL en un solo mensaje, sin la nota interna', () => {
   const oficina = crearOficina({ stores: { oficina: storeMemoria(), activacion: storeMemoria(), calificacion: storeMemoria() } });
   const u = { id: 8 };
   oficina.recibir({ usuario: u, texto: '/calificacion' });
@@ -141,6 +141,8 @@ test('/preguntas entrega el cuestionario al KOL en mensajes de maximo 6 lineas y
   const guiones = out.filter((s) => s.guion);
   assert.ok(guiones.some((g) => /¿Desde qué país operas\?/.test(g.guion.texto)));
   assert.ok(guiones.some((g) => /exclusividad vigente con otra plataforma/.test(g.guion.texto)));
-  assert.ok(guiones.filter((g) => g.guion.tipo === 'ENVIAR').every((g) => g.guion.texto.split('\n').length <= 6));
-  assert.ok(guiones.some((g) => g.guion.tipo === 'INTERNO' && /Fuente del lead/.test(g.guion.texto)));
+  assert.equal(guiones.length, 1);
+  assert.ok(guiones[0].guion.texto.length <= 4096);
+  assert.match(guiones[0].guion.texto, /¡Hola!/);
+  assert.ok(!guiones.some((g) => g.guion.tipo === 'INTERNO' || /Fuente del lead|KOL claim/.test(g.guion.texto)));
 });
